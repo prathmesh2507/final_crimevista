@@ -52,7 +52,8 @@ export const reportsApi = {
 
   /** Resolves relative download URLs returned by the backend against the API origin. */
   resolveDownloadUrl(url: string): string {
-    if (/^https?:\/\//i.test(url)) return url;
-    return new URL(url, `${API_BASE_URL}/`).toString();
+    const apiBaseUrl = new URL(API_BASE_URL, window.location.origin);
+    apiBaseUrl.pathname = `${apiBaseUrl.pathname.replace(/\/+$/, "")}/`;
+    return new URL(url, apiBaseUrl).toString();
   },
 };
