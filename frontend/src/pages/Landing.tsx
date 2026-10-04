@@ -19,7 +19,7 @@ const features = [
     icon: MapIcon,
     title: "Crime mapping",
     description:
-      "Explore incident locations and patterns across Nagpur on an interactive map.",
+      "Explore incident locations and patterns across  on an interactive map.",
     to: "/map",
     color: "text-sky-300",
     tone: "bg-sky-400/10",
@@ -53,7 +53,7 @@ const features = [
   },
 ];
 
-function NagpurMapPreview() {
+function MapPreview() {
   const roads = [
     "M12 116 C108 94 137 147 232 122 S365 76 488 105",
     "M31 205 C116 188 169 213 258 185 S391 166 482 190",
@@ -93,14 +93,30 @@ function NagpurMapPreview() {
       aria-label="Illustrative city map preview with incident markers"
     >
       <defs>
-        <pattern id="landing-map-grid" width="30" height="30" patternUnits="userSpaceOnUse">
-          <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#163458" strokeWidth="0.7" />
+        <pattern
+          id="landing-map-grid"
+          width="30"
+          height="30"
+          patternUnits="userSpaceOnUse"
+        >
+          <path
+            d="M 30 0 L 0 0 0 30"
+            fill="none"
+            stroke="#163458"
+            strokeWidth="0.7"
+          />
         </pattern>
         <radialGradient id="landing-map-glow">
           <stop offset="0" stopColor="#0ea5e9" stopOpacity=".2" />
           <stop offset="1" stopColor="#0ea5e9" stopOpacity="0" />
         </radialGradient>
-        <filter id="landing-point-glow" x="-200%" y="-200%" width="400%" height="400%">
+        <filter
+          id="landing-point-glow"
+          x="-200%"
+          y="-200%"
+          width="400%"
+          height="400%"
+        >
           <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
@@ -110,7 +126,13 @@ function NagpurMapPreview() {
       </defs>
       <rect width="500" height="300" fill="#06172b" />
       <rect width="500" height="300" fill="url(#landing-map-grid)" />
-      <ellipse cx="263" cy="151" rx="205" ry="150" fill="url(#landing-map-glow)" />
+      <ellipse
+        cx="263"
+        cy="151"
+        rx="205"
+        ry="150"
+        fill="url(#landing-map-glow)"
+      />
       <path
         d="M20 48 82 29l51 10 35-20 63 13 47-17 62 23 54-8 74 33-14 43 25 38-26 54 7 47-56 21-55-14-54 18-58-15-52 20-68-24-60 4-41-37 11-49-21-38 19-43Z"
         fill="#0c2440"
@@ -135,12 +157,21 @@ function NagpurMapPreview() {
         strokeWidth="2"
       />
       {points.map(([cx, cy], index) => (
-        <g key={`${cx}-${cy}`} filter={index % 4 === 0 ? "url(#landing-point-glow)" : undefined}>
+        <g
+          key={`${cx}-${cy}`}
+          filter={index % 4 === 0 ? "url(#landing-point-glow)" : undefined}
+        >
           <circle
             cx={cx}
             cy={cy}
             r={index % 5 === 0 ? 5 : 3.5}
-            fill={index % 4 === 0 ? "#fb7185" : index % 3 === 0 ? "#fbbf24" : "#38bdf8"}
+            fill={
+              index % 4 === 0
+                ? "#fb7185"
+                : index % 3 === 0
+                  ? "#fbbf24"
+                  : "#38bdf8"
+            }
             fillOpacity=".95"
           />
           <circle
@@ -164,9 +195,7 @@ function NagpurMapPreview() {
           fontSize="12"
           fontFamily="sans-serif"
           fontWeight="600"
-        >
-          NAGPUR
-        </text>
+        ></text>
       </g>
     </svg>
   );
@@ -181,8 +210,10 @@ function DashboardPreview() {
             <ShieldCheckIcon className="h-4 w-4" aria-hidden />
           </span>
           <div>
-            <p className="text-xs font-semibold tracking-wide text-white">CrimeVista</p>
-            <p className="text-[9px] text-slate-400">Nagpur urban safety</p>
+            <p className="text-xs font-semibold tracking-wide text-white">
+              CrimeVista
+            </p>
+            <p className="text-[9px] text-slate-400"> urban safety</p>
           </div>
         </div>
         <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-medium text-emerald-300">
@@ -195,9 +226,11 @@ function DashboardPreview() {
         <div className="min-w-0">
           <div className="mb-3 flex items-end justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-white sm:text-sm">Incident map</p>
+              <p className="text-xs font-semibold text-white sm:text-sm">
+                Incident map
+              </p>
               <p className="mt-0.5 text-[9px] text-slate-400 sm:text-[10px]">
-                Explore recorded incidents across Nagpur
+                Explore recorded incidents across
               </p>
             </div>
             <span className="hidden rounded-md border border-white/10 px-2 py-1 text-[9px] text-slate-300 sm:block">
@@ -205,30 +238,57 @@ function DashboardPreview() {
             </span>
           </div>
           <div className="h-[190px] overflow-hidden rounded-xl border border-sky-300/15 sm:h-[260px]">
-            <NagpurMapPreview />
+            <MapPreview />
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {[
               { label: "Trends", icon: TrendingUpIcon, color: "text-sky-300" },
-              { label: "Hotspots", icon: MapPinnedIcon, color: "text-orange-300" },
-              { label: "Reports", icon: FileTextIcon, color: "text-violet-300" },
+              {
+                label: "Hotspots",
+                icon: MapPinnedIcon,
+                color: "text-orange-300",
+              },
+              {
+                label: "Reports",
+                icon: FileTextIcon,
+                color: "text-violet-300",
+              },
             ].map(({ label, icon: Icon, color }) => (
               <div
                 key={label}
                 className="flex items-center gap-2 rounded-lg border border-white/[.07] bg-white/[.03] px-2.5 py-2"
               >
                 <Icon className={`h-3.5 w-3.5 ${color}`} aria-hidden />
-                <span className="text-[9px] text-slate-300 sm:text-[10px]">{label}</span>
+                <span className="text-[9px] text-slate-300 sm:text-[10px]">
+                  {label}
+                </span>
               </div>
             ))}
           </div>
         </div>
         <aside className="space-y-2.5 pt-8">
-          <p className="mb-1 text-[10px] font-medium text-slate-400">Explore the platform</p>
+          <p className="mb-1 text-[10px] font-medium text-slate-400">
+            Explore the platform
+          </p>
           {[
-            { name: "Overview", detail: "City-wide summary", icon: BarChart3Icon, color: "text-sky-300" },
-            { name: "Crime map", detail: "Location patterns", icon: MapIcon, color: "text-rose-300" },
-            { name: "Area explorer", detail: "Compare local areas", icon: MapPinnedIcon, color: "text-amber-300" },
+            {
+              name: "Overview",
+              detail: "City-wide summary",
+              icon: BarChart3Icon,
+              color: "text-sky-300",
+            },
+            {
+              name: "Crime map",
+              detail: "Location patterns",
+              icon: MapIcon,
+              color: "text-rose-300",
+            },
+            {
+              name: "Area explorer",
+              detail: "Compare local areas",
+              icon: MapPinnedIcon,
+              color: "text-amber-300",
+            },
           ].map(({ name, detail, icon: Icon, color }) => (
             <div
               key={name}
@@ -236,13 +296,19 @@ function DashboardPreview() {
             >
               <div className="flex items-center gap-2">
                 <Icon className={`h-3.5 w-3.5 ${color}`} aria-hidden />
-                <p className="text-[10px] font-medium text-slate-200 sm:text-[11px]">{name}</p>
+                <p className="text-[10px] font-medium text-slate-200 sm:text-[11px]">
+                  {name}
+                </p>
               </div>
-              <p className="mt-1 pl-[22px] text-[8px] text-slate-500 sm:text-[9px]">{detail}</p>
+              <p className="mt-1 pl-[22px] text-[8px] text-slate-500 sm:text-[9px]">
+                {detail}
+              </p>
             </div>
           ))}
           <div className="rounded-lg border border-sky-300/10 bg-sky-300/[.05] p-2.5 sm:p-3">
-            <p className="text-[9px] font-medium text-sky-200">Built for exploration</p>
+            <p className="text-[9px] font-medium text-sky-200">
+              Built for exploration
+            </p>
             <p className="mt-1 text-[8px] leading-relaxed text-slate-400 sm:text-[9px]">
               Use filters and focused views to explore the available data.
             </p>
@@ -277,21 +343,39 @@ export function Landing() {
               Crime<span className="text-sky-400">Vista</span>
             </span>
             <span className="block text-[10px] leading-tight tracking-wide text-slate-400 sm:text-xs">
-              NAGPUR URBAN SAFETY
+              URBAN SAFETY
             </span>
           </span>
         </Link>
 
-        <nav aria-label="Main navigation" className="hidden items-center gap-8 md:flex">
-          <a className="landing-nav-link landing-nav-active" href="#home">Home</a>
-          <a className="landing-nav-link" href="#features">Features</a>
-          <Link className="landing-nav-link" to="/trends">Analytics</Link>
-          <Link className="landing-nav-link" to="/map">Map</Link>
-          <Link className="landing-nav-link" to="/reports">Reports</Link>
-          <a className="landing-nav-link" href="#about">About</a>
+        <nav
+          aria-label="Main navigation"
+          className="hidden items-center gap-8 md:flex"
+        >
+          <a className="landing-nav-link landing-nav-active" href="#home">
+            Home
+          </a>
+          <a className="landing-nav-link" href="#features">
+            Features
+          </a>
+          <Link className="landing-nav-link" to="/trends">
+            Analytics
+          </Link>
+          <Link className="landing-nav-link" to="/map">
+            Map
+          </Link>
+          <Link className="landing-nav-link" to="/reports">
+            Reports
+          </Link>
+          <a className="landing-nav-link" href="#about">
+            About
+          </a>
         </nav>
 
-        <Link to="/dashboard" className="landing-header-cta hidden md:inline-flex">
+        <Link
+          to="/dashboard"
+          className="landing-header-cta hidden md:inline-flex"
+        >
           Get started <ArrowRightIcon className="h-4 w-4" aria-hidden />
         </Link>
 
@@ -299,10 +383,16 @@ export function Landing() {
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
           className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 text-white md:hidden"
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={
+            menuOpen ? "Close navigation menu" : "Open navigation menu"
+          }
           aria-expanded={menuOpen}
         >
-          {menuOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
+          {menuOpen ? (
+            <XIcon className="h-5 w-5" />
+          ) : (
+            <MenuIcon className="h-5 w-5" />
+          )}
         </button>
       </header>
 
@@ -320,16 +410,30 @@ export function Landing() {
             { label: "About", href: "#about" },
           ].map((item) =>
             item.to ? (
-              <Link key={item.label} to={item.to} onClick={closeMenu} className="landing-mobile-link">
+              <Link
+                key={item.label}
+                to={item.to}
+                onClick={closeMenu}
+                className="landing-mobile-link"
+              >
                 {item.label}
               </Link>
             ) : (
-              <a key={item.label} href={item.href} onClick={closeMenu} className="landing-mobile-link">
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={closeMenu}
+                className="landing-mobile-link"
+              >
                 {item.label}
               </a>
             ),
           )}
-          <Link to="/dashboard" onClick={closeMenu} className="landing-header-cta mt-2 justify-center">
+          <Link
+            to="/dashboard"
+            onClick={closeMenu}
+            className="landing-header-cta mt-2 justify-center"
+          >
             Get started <ArrowRightIcon className="h-4 w-4" aria-hidden />
           </Link>
         </nav>
@@ -352,12 +456,13 @@ export function Landing() {
             <span className="landing-gradient-text">insights.</span>
           </h1>
           <p className="mt-6 max-w-[500px] text-sm leading-7 text-slate-300 sm:text-base sm:leading-8">
-            Explore crime patterns across Nagpur with clear data, interactive
-            maps, and thoughtful analytics—all in one place.
+            Explore crime patterns across with clear data, interactive maps, and
+            thoughtful analytics—all in one place.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/dashboard" className="landing-primary-cta">
-              Explore the dashboard <ArrowRightIcon className="h-4 w-4" aria-hidden />
+              Explore the dashboard{" "}
+              <ArrowRightIcon className="h-4 w-4" aria-hidden />
             </Link>
             <Link to="/map" className="landing-secondary-cta">
               Explore crime map <MapIcon className="h-4 w-4" aria-hidden />
@@ -381,8 +486,12 @@ export function Landing() {
                 <TrendingUpIcon className="h-4 w-4" aria-hidden />
               </span>
               <span>
-                <span className="block text-[11px] font-medium text-white">Explore patterns</span>
-                <span className="mt-0.5 block text-[9px] text-slate-400">Across time and location</span>
+                <span className="block text-[11px] font-medium text-white">
+                  Explore patterns
+                </span>
+                <span className="mt-0.5 block text-[9px] text-slate-400">
+                  Across time and location
+                </span>
               </span>
             </div>
           </div>
@@ -406,29 +515,42 @@ export function Landing() {
             </p>
           </div>
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map(({ icon: Icon, title, description, to, color, tone }) => (
-              <Link
-                key={title}
-                to={to}
-                className="landing-feature-card group rounded-2xl border border-white/[.08] bg-white/[.025] p-5 transition duration-200 hover:-translate-y-1 hover:border-sky-300/25 hover:bg-white/[.045]"
-              >
-                <span className={`grid h-11 w-11 place-items-center rounded-xl ${tone} ${color}`}>
-                  <Icon className="h-5 w-5" aria-hidden />
-                </span>
-                <h3 className="mt-5 text-base font-semibold text-white">{title}</h3>
-                <p className="mt-2 min-h-[66px] text-sm leading-6 text-slate-400">
-                  {description}
-                </p>
-                <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-sky-300">
-                  Explore <ArrowRightIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" aria-hidden />
-                </span>
-              </Link>
-            ))}
+            {features.map(
+              ({ icon: Icon, title, description, to, color, tone }) => (
+                <Link
+                  key={title}
+                  to={to}
+                  className="landing-feature-card group rounded-2xl border border-white/[.08] bg-white/[.025] p-5 transition duration-200 hover:-translate-y-1 hover:border-sky-300/25 hover:bg-white/[.045]"
+                >
+                  <span
+                    className={`grid h-11 w-11 place-items-center rounded-xl ${tone} ${color}`}
+                  >
+                    <Icon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <h3 className="mt-5 text-base font-semibold text-white">
+                    {title}
+                  </h3>
+                  <p className="mt-2 min-h-[66px] text-sm leading-6 text-slate-400">
+                    {description}
+                  </p>
+                  <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-sky-300">
+                    Explore{" "}
+                    <ArrowRightIcon
+                      className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1"
+                      aria-hidden
+                    />
+                  </span>
+                </Link>
+              ),
+            )}
           </div>
         </div>
       </section>
 
-      <section id="about" className="relative z-10 mx-auto max-w-[1440px] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+      <section
+        id="about"
+        className="relative z-10 mx-auto max-w-[1440px] px-5 py-16 sm:px-8 sm:py-20 lg:px-12"
+      >
         <div className="landing-about relative overflow-hidden rounded-3xl border border-sky-300/10 px-6 py-10 sm:px-10 sm:py-12 lg:flex lg:items-center lg:justify-between lg:px-14">
           <div className="relative z-10 max-w-2xl">
             <p className="text-[10px] font-semibold tracking-[.18em] text-sky-300 sm:text-xs">
@@ -443,7 +565,10 @@ export function Landing() {
               reports with more context.
             </p>
           </div>
-          <Link to="/dashboard" className="landing-primary-cta relative z-10 mt-7 shrink-0 lg:ml-10 lg:mt-0">
+          <Link
+            to="/dashboard"
+            className="landing-primary-cta relative z-10 mt-7 shrink-0 lg:ml-10 lg:mt-0"
+          >
             Get started <ArrowRightIcon className="h-4 w-4" aria-hidden />
           </Link>
           <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full bg-sky-400/[.08] blur-3xl" />
@@ -454,11 +579,15 @@ export function Landing() {
         <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-5 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
           <div className="flex items-center gap-2">
             <BrandMark />
-            <span>CrimeVista · Nagpur Urban Safety</span>
+            <span>CrimeVista · Urban Safety</span>
           </div>
           <p>Explore available crime data with context and care.</p>
-          <Link to="/dashboard" className="font-medium text-slate-300 transition hover:text-sky-300">
-            Open dashboard <ArrowRightIcon className="ml-1 inline h-3.5 w-3.5" aria-hidden />
+          <Link
+            to="/dashboard"
+            className="font-medium text-slate-300 transition hover:text-sky-300"
+          >
+            Open dashboard{" "}
+            <ArrowRightIcon className="ml-1 inline h-3.5 w-3.5" aria-hidden />
           </Link>
         </div>
       </footer>
