@@ -1,16 +1,19 @@
+import asyncio
 import os
+from io import BytesIO
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from fastapi import Depends, FastAPI
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, UploadFile
 from fastapi.testclient import TestClient
 
-from app.routes import auth
+from app.routes import auth, upload
 from app.security import create_admin_session, is_valid_admin_session, require_api_token
 
 
 class AdminAuthenticationTests(unittest.TestCase):
     def setUp(self) -> None:
+        upload.UPLOADS.clear()
         self.environment = patch.dict(
             os.environ,
             {
@@ -99,6 +102,47 @@ class AdminAuthenticationTests(unittest.TestCase):
             is_valid_admin_session(f"{session}tampered", "test-api-secret", now=1000)
         )
         self.assertFalse(is_valid_admin_session(None, "test-api-secret", now=1000))
+
+    def test_csv_upload_returns_queued_before_processing_completes(self) -> None:
+        content = (
+            b"crime_id,date,area,crime_type,severity\n"
+            b"crime-1,2025-01-01,Central,theft,low\n"
+        )
+        background_tasks = BackgroundTasks()
+        session_manager = MagicMock()
+        with (
+            patch.object(upload, "SessionLocal", return_value=session_manager),
+            patch.object(upload, "replace_records", return_value=(0, 1)),
+        ):
+            response = asyncio.run(
+                upload.upload(
+                    background_tasks=background_tasks,
+                    file=UploadFile(filename="sample.csv", file=BytesIO(content)),
+                    _token="test-api-secret",
+                )
+            )
+            self.assertEqual(response["stage"], "queued")
+            self.assertEqual(response["analysisStatus"], "pending")
+            self.assertEqual(len(background_tasks.tasks), 1)
+
+            with self.assertRaises(HTTPException) as conflict:
+                asyncio.run(
+                    upload.upload(
+                        background_tasks=BackgroundTasks(),
+                        file=UploadFile(
+                            filename="second.csv", file=BytesIO(content)
+                        ),
+                        _token="test-api-secret",
+                    )
+                )
+            self.assertEqual(conflict.exception.status_code, 409)
+
+            asyncio.run(background_tasks())
+
+        final_status = upload.UPLOADS[response["uploadId"]]
+        self.assertEqual(final_status["stage"], "completed")
+        self.assertEqual(final_status["rowsImported"], 1)
+        self.assertEqual(final_status["rowsReceived"], 1)
 
 
 if __name__ == "__main__":

@@ -47,6 +47,7 @@ Notes:
 - `ADMIN_USERNAME` and `ADMIN_PASSWORD` provision the single administrator login. There is no public registration.
 - Sign-in issues a 30-day `HttpOnly`, `Secure`, `SameSite=Strict` cookie. The browser never stores the API token or administrator password.
 - Set all three authentication variables in Render before deploying the new login flow. Then sign in from Settings once per browser.
+- CSV upload returns immediately with a queued upload ID; the UI polls the protected status endpoint while the backend validates and replaces the dataset. Do not start another upload until the current one finishes.
 - `FRONTEND_URL` and `CORS_ORIGINS` should point to the public Render URL.
 - If you use same-origin hosting, a single service origin is often enough; `CORS_ORIGINS` remains optional for local dev.
 
