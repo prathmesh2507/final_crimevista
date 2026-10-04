@@ -68,3 +68,4 @@ The Render health check expects:
 Local development is still supported by leaving `APP_ENV` unset or set to `development`, which allows an SQLite fallback when no database URL is configured.
 
 Do not rely on SQLite for production workloads.
+postgresql://crimevista_user:PdhxCm2ZoZuSr8ZaSECnCMlqgDGyWc1Q@dpg-db0lslmgekts73a9at9g-a/crimevista

@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from ..database import Base, SessionLocal, configured_dataset_path, engine
 from ..models import Crime
 
+DEFAULT_BATCH_SIZE = max(1, int(os.getenv("DB_BATCH_SIZE", "500")))
+
 REQUIRED_COLUMNS = ["crime_id", "date", "area", "crime_type", "severity"]
 CRIME_COLUMNS = [
     "crime_id",
@@ -178,24 +180,67 @@ def sanitize_existing_demo_records(db: Session) -> int:
     return updated
 
 
-def _upsert_records(session: Session, records: list[dict]) -> int:
+def _batch_insert_records(session: Session, records: list[dict], *, batch_size: int = DEFAULT_BATCH_SIZE) -> int:
     if not records:
         return 0
-    dialect_name = session.bind.dialect.name if session.bind is not None else ""
-    if dialect_name == "postgresql":
-        insert_stmt = postgresql.insert(Crime).values(records)
-        insert_stmt = insert_stmt.on_conflict_do_nothing(index_elements=["crime_id"])
-        session.execute(insert_stmt)
-        return session.scalar(select(func.count()).select_from(Crime)) or 0
 
-    inserted = 0
-    for record in records:
-        existing = session.get(Crime, record["crime_id"])
-        if existing is None:
-            session.add(Crime(**record))
-            inserted += 1
-    session.flush()
-    return inserted
+    dialect_name = session.bind.dialect.name if session.bind is not None else ""
+    total_inserted = 0
+
+    for index in range(0, len(records), batch_size):
+        batch = records[index : index + batch_size]
+        try:
+            if dialect_name == "postgresql":
+                stmt = postgresql.insert(Crime).values(batch).on_conflict_do_nothing(index_elements=["crime_id"])
+                session.execute(stmt)
+                total_inserted += len(batch)
+            else:
+                for record in batch:
+                    existing = session.get(Crime, record["crime_id"])
+                    if existing is None:
+                        session.add(Crime(**record))
+                        total_inserted += 1
+                session.flush()
+        except Exception as exc:
+            raise RuntimeError(
+                f"Database batch insertion failed for batch {index // batch_size + 1} "
+                f"(records {index + 1}-{min(index + len(batch), len(records))} of {len(records)}): {exc}"
+            ) from exc
+
+    return total_inserted
+
+
+def _load_and_insert_initial_dataset(session: Session) -> int:
+    dataset = configured_dataset_path()
+    if not dataset.is_file():
+        raise FileNotFoundError(
+            f"Crime dataset was not found: {dataset}. Set DATASET_PATH in backend/.env."
+        )
+
+    records, received, errors = parse_csv(dataset.read_bytes())
+    if not records:
+        raise ValueError(f"No valid crime records found in {dataset}. {errors[:3]}")
+
+    dialect_name = session.bind.dialect.name if session.bind is not None else ""
+    batches = (len(records) + DEFAULT_BATCH_SIZE - 1) // DEFAULT_BATCH_SIZE
+    for batch_index in range(0, len(records), DEFAULT_BATCH_SIZE):
+        batch = records[batch_index : batch_index + DEFAULT_BATCH_SIZE]
+        print(f"Inserting initial dataset batch {batch_index // DEFAULT_BATCH_SIZE + 1}/{batches} ({len(batch)} rows)")
+        if dialect_name == "postgresql":
+            stmt = postgresql.insert(Crime).values(batch).on_conflict_do_nothing(index_elements=["crime_id"])
+            session.execute(stmt)
+        else:
+            for record in batch:
+                if session.get(Crime, record["crime_id"]) is None:
+                    session.add(Crime(**record))
+            session.flush()
+
+    session.commit()
+    loaded = session.scalar(select(func.count()).select_from(Crime)) or 0
+    print(f"CrimeVista database initialized. Loaded {loaded} crime records from {dataset.name} ({received} rows).")
+    if errors:
+        print(f"Skipped {len(errors)} invalid or duplicate CSV rows.")
+    return loaded
 
 
 def initialize_database() -> int:
@@ -214,29 +259,15 @@ def initialize_database() -> int:
                 )
                 return existing
 
-            dataset = configured_dataset_path()
-            if not dataset.is_file():
-                raise FileNotFoundError(
-                    f"Crime dataset was not found: {dataset}. Set DATASET_PATH in backend/.env."
-                )
-            records, received, errors = parse_csv(dataset.read_bytes())
-            if not records:
-                raise ValueError(
-                    f"No valid crime records found in {dataset}. {errors[:3]}"
-                )
-            db.execute(
-                postgresql.insert(Crime)
-                .values(records)
-                .on_conflict_do_nothing(index_elements=["crime_id"]),
-            )
-            db.commit()
-            loaded = db.scalar(select(func.count()).select_from(Crime)) or 0
-            print(
-                f"CrimeVista database initialized. Loaded {loaded} crime records from {dataset.name} ({received} rows)."
-            )
-            if errors:
-                print(f"Skipped {len(errors)} invalid or duplicate CSV rows.")
-            return loaded
+            print("CrimeVista starting... Creating/verifying database tables...")
+            print("Checking existing records...")
+            if db.scalar(select(func.count()).select_from(Crime)) == 0:
+                print("Existing records: 0")
+                print("Loading initial dataset...")
+                return _load_and_insert_initial_dataset(db)
+
+            print(f"Existing records: {existing}")
+            return existing
         except Exception:
             db.rollback()
             raise
@@ -254,16 +285,25 @@ def last_updated(db: Session) -> str | None:
     return latest.isoformat()
 
 
-def insert_records(db: Session, records: list[dict]) -> int:
+def insert_records(db: Session, records: list[dict], *, batch_size: int = DEFAULT_BATCH_SIZE) -> int:
     if not records:
         return 0
     before = total_record_count(db)
+    dialect_name = db.bind.dialect.name if db.bind is not None else ""
     try:
-        db.execute(
-            postgresql.insert(Crime)
-            .values(records)
-            .on_conflict_do_nothing(index_elements=["crime_id"]),
-        )
+        for index in range(0, len(records), batch_size):
+            batch = records[index : index + batch_size]
+            if dialect_name == "postgresql":
+                db.execute(
+                    postgresql.insert(Crime)
+                    .values(batch)
+                    .on_conflict_do_nothing(index_elements=["crime_id"]),
+                )
+            else:
+                for record in batch:
+                    if db.get(Crime, record["crime_id"]) is None:
+                        db.add(Crime(**record))
+                db.flush()
         db.commit()
     except Exception:
         db.rollback()
@@ -271,17 +311,25 @@ def insert_records(db: Session, records: list[dict]) -> int:
     return total_record_count(db) - before
 
 
-def replace_records(db: Session, records: list[dict]) -> tuple[int, int]:
+def replace_records(db: Session, records: list[dict], *, batch_size: int = DEFAULT_BATCH_SIZE) -> tuple[int, int]:
     if not records:
         return 0, 0
     previous_count = total_record_count(db)
+    dialect_name = db.bind.dialect.name if db.bind is not None else ""
     try:
         db.query(Crime).delete(synchronize_session=False)
-        db.execute(
-            postgresql.insert(Crime)
-            .values(records)
-            .on_conflict_do_nothing(index_elements=["crime_id"]),
-        )
+        for index in range(0, len(records), batch_size):
+            batch = records[index : index + batch_size]
+            if dialect_name == "postgresql":
+                db.execute(
+                    postgresql.insert(Crime)
+                    .values(batch)
+                    .on_conflict_do_nothing(index_elements=["crime_id"]),
+                )
+            else:
+                for record in batch:
+                    db.add(Crime(**record))
+                db.flush()
         db.commit()
     except Exception:
         db.rollback()
