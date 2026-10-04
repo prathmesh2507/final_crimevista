@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 
 from .database import BASE_DIR
 from .services.data_service import initialize_database
-from .routes import analytics, crimes, dashboard, filters, health, map, reports, upload
+from .routes import analytics, auth, crimes, dashboard, filters, health, map, reports, upload
 
 load_dotenv(BASE_DIR / ".env")
 
@@ -35,7 +35,7 @@ origins = list(dict.fromkeys(configured_origins)) or [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Accept", "Authorization", "Content-Type"],
 )
@@ -43,6 +43,7 @@ app.add_middleware(
 
 for route_module in (
     health,
+    auth,
     filters,
     dashboard,
     crimes,

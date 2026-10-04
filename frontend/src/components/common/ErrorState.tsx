@@ -1,5 +1,6 @@
 import React from 'react';
 import { CircleAlertIcon, RotateCwIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { normalizeApiError } from '../../api/errors';
 import { cn } from '../../utils/cn';
 
@@ -24,6 +25,14 @@ export function ErrorState({ error, title = 'Unable to load data', onRetry, comp
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-fg">{title}</p>
         <p className="mt-0.5 text-sm text-muted">{apiError.message}</p>
+        {apiError.status === 401 && (
+          <Link
+            to="/settings"
+            className="mt-2 inline-flex text-sm font-medium text-analytics hover:underline"
+          >
+            Open Settings to sign in
+          </Link>
+        )}
         {!compact && apiError.details.length > 0 &&
         <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-muted">
             {apiError.details.map((d) =>

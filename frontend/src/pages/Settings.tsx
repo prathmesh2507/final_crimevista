@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { EyeIcon, EyeOffIcon, LoaderCircleIcon, PlugIcon, ShieldAlertIcon, Trash2Icon } from "lucide-react";
+import { LoaderCircleIcon, LogOutIcon, PlugIcon } from "lucide-react";
+import { authApi } from "../api/authApi";
 import { API_BASE_URL, API_TIMEOUT_MS } from "../api/config";
+import { isApiError } from "../api/errors";
 import { ENDPOINT_REGISTRY, type EndpointSpec } from "../api/endpoints";
 import { DataTable, type Column } from "../components/common/DataTable";
 import { ErrorState } from "../components/common/ErrorState";
 import { PageHeader } from "../components/common/PageHeader";
-import { AUTH_STATE_CHANGED_EVENT, clearAuthToken, hasAuthToken, readAuthToken, writeAuthToken } from "../auth/session";
+import { AUTH_STATE_CHANGED_EVENT } from "../auth/session";
 import { useSystemStatus } from "../hooks/useSystemStatus";
 import { cn } from "../utils/cn";
 import { formatDateTime } from "../utils/formatters";
@@ -14,28 +16,30 @@ const COLUMNS: Column<EndpointSpec>[] = [
   {
     key: "method",
     header: "Method",
-    render: (e) => (
+    render: (endpoint) => (
       <span
         className={cn(
           "font-mono text-xs font-semibold",
-          e.method === "GET" ? "text-analytics" : "text-alert",
+          endpoint.method === "GET" ? "text-analytics" : "text-alert",
         )}
       >
-        {e.method}
+        {endpoint.method}
       </span>
     ),
   },
   {
     key: "path",
     header: "Path",
-    render: (e) => <code className="font-mono text-xs text-fg">{e.path}</code>,
+    render: (endpoint) => (
+      <code className="font-mono text-xs text-fg">{endpoint.path}</code>
+    ),
   },
-  { key: "purpose", header: "Purpose", render: (e) => e.purpose },
+  { key: "purpose", header: "Purpose", render: (endpoint) => endpoint.purpose },
   {
     key: "replaces",
     header: "Streamlit equivalent",
-    render: (e) => (
-      <span className="font-mono text-xs text-muted">{e.replaces}</span>
+    render: (endpoint) => (
+      <span className="font-mono text-xs text-muted">{endpoint.replaces}</span>
     ),
   },
   {
@@ -51,15 +55,28 @@ const COLUMNS: Column<EndpointSpec>[] = [
 
 export function Settings() {
   const health = useSystemStatus();
-  const [token, setToken] = useState<string>(readAuthToken() ?? "");
-  const [showToken, setShowToken] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    const sync = () => setToken(readAuthToken() ?? "");
-    sync();
-    window.addEventListener(AUTH_STATE_CHANGED_EVENT, sync);
-    return () => window.removeEventListener(AUTH_STATE_CHANGED_EVENT, sync);
+    let active = true;
+    const onAuthStateChanged = () => setAuthenticated(false);
+    authApi
+      .getSession()
+      .then((session) => {
+        if (active) setAuthenticated(session.authenticated);
+      })
+      .catch(() => {
+        if (active) setAuthenticated(false);
+      });
+    window.addEventListener(AUTH_STATE_CHANGED_EVENT, onAuthStateChanged);
+    return () => {
+      active = false;
+      window.removeEventListener(AUTH_STATE_CHANGED_EVENT, onAuthStateChanged);
+    };
   }, []);
 
   const rows: Array<[string, React.ReactNode]> = [
@@ -78,16 +95,40 @@ export function Settings() {
     ],
   ];
 
-  const handleSave = () => {
-    writeAuthToken(token);
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2000);
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      await authApi.login({ username, password });
+      setPassword("");
+      setAuthenticated(true);
+    } catch (error) {
+      if (isApiError(error) && error.status === 401) {
+        setAuthError("The administrator username or password is incorrect.");
+      } else if (isApiError(error) && error.status === 503) {
+        setAuthError(
+          "Administrator sign-in is not configured on the server. Set ADMIN_USERNAME, ADMIN_PASSWORD, and API_ADMIN_TOKEN in Render.",
+        );
+      } else {
+        setAuthError("Sign-in failed. Check the connection and try again.");
+      }
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
-  const handleClear = () => {
-    clearAuthToken();
-    setToken("");
-    setSaved(false);
+  const handleLogout = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      await authApi.logout();
+      setAuthenticated(false);
+    } catch {
+      setAuthError("Sign-out failed. Please try again.");
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   return (
@@ -120,60 +161,97 @@ export function Settings() {
 
         <section className="rounded-xl border border-line bg-surface p-5 shadow-card">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-fg">Admin authentication</h2>
-            {hasAuthToken() && (
+            <h2 className="text-base font-semibold text-fg">
+              Administrator sign-in
+            </h2>
+            {authenticated && (
               <span className="rounded-full bg-positive-soft px-2 py-0.5 text-xs font-medium text-positive">
-                Authorized
+                Signed in
               </span>
             )}
           </div>
 
-          <div className="mt-4 space-y-3">
-            <label className="block text-sm text-muted" htmlFor="api-admin-token">
-              Runtime API token
-            </label>
-            <div className="relative">
-              <input
-                id="api-admin-token"
-                type={showToken ? "text" : "password"}
-                value={token}
-                onChange={(event) => setToken(event.target.value)}
-                placeholder="Enter the admin token"
-                className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 pr-10 text-sm text-fg placeholder:text-muted focus:border-analytics focus:outline-none"
-              />
+          {authenticated === null ? (
+            <p className="mt-4 text-sm text-muted">Checking sign-in…</p>
+          ) : authenticated ? (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-muted">
+                You are signed in. This browser keeps a secure, HttpOnly
+                administrator session for up to 30 days.
+              </p>
               <button
                 type="button"
-                onClick={() => setShowToken((value) => !value)}
-                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted hover:text-fg"
-                aria-label={showToken ? "Hide token" : "Show token"}
+                onClick={handleLogout}
+                disabled={authLoading}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors hover:bg-canvas disabled:opacity-60"
               >
-                {showToken ? <EyeOffIcon className="h-4 w-4" aria-hidden /> : <EyeIcon className="h-4 w-4" aria-hidden />}
+                {authLoading ? (
+                  <LoaderCircleIcon className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <LogOutIcon className="h-4 w-4" aria-hidden />
+                )}
+                Sign out
               </button>
             </div>
-
-            <div className="flex flex-wrap gap-2">
+          ) : (
+            <form onSubmit={handleLogin} className="mt-4 space-y-3">
+              <div>
+                <label
+                  className="mb-1.5 block text-sm text-muted"
+                  htmlFor="admin-username"
+                >
+                  Administrator username
+                </label>
+                <input
+                  id="admin-username"
+                  type="text"
+                  autoComplete="username"
+                  required
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-fg placeholder:text-muted focus:border-analytics focus:outline-none"
+                />
+              </div>
+              <div>
+                <label
+                  className="mb-1.5 block text-sm text-muted"
+                  htmlFor="admin-password"
+                >
+                  Administrator password
+                </label>
+                <input
+                  id="admin-password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-fg placeholder:text-muted focus:border-analytics focus:outline-none"
+                />
+              </div>
               <button
-                type="button"
-                onClick={handleSave}
-                className="inline-flex h-9 items-center justify-center rounded-lg bg-analytics px-3 text-sm font-medium text-white transition-colors hover:bg-analytics-strong"
+                type="submit"
+                disabled={authLoading}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-analytics px-3 text-sm font-medium text-white transition-colors hover:bg-analytics-strong disabled:opacity-60"
               >
-                {hasAuthToken() ? "Update token" : "Save token"}
+                {authLoading && (
+                  <LoaderCircleIcon className="h-4 w-4 animate-spin" aria-hidden />
+                )}
+                Sign in
               </button>
-              <button
-                type="button"
-                onClick={handleClear}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors hover:bg-canvas"
-              >
-                <Trash2Icon className="h-4 w-4" aria-hidden />
-                Clear
-              </button>
-            </div>
+            </form>
+          )}
 
-            <p className="text-xs text-muted">
-              This is the same bearer token the backend expects in <code className="font-mono">Authorization: Bearer &lt;token&gt;</code>. It is stored only in browser storage for the current runtime and is never embedded in the frontend bundle or a VITE_* variable.
+          {authError && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {authError}
             </p>
-            {saved && <p className="text-xs font-medium text-positive">Token saved for this browser session.</p>}
-          </div>
+          )}
+          <p className="mt-3 text-xs text-muted">
+            Administrator access is provisioned by the server owner. There is
+            no public registration. The API secret remains on the server; this
+            browser receives only an HttpOnly session cookie.
+          </p>
         </section>
 
         <section className="rounded-xl border border-line bg-surface p-5 shadow-card">
@@ -186,10 +264,7 @@ export function Settings() {
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-line px-3 text-sm font-medium text-fg transition-colors duration-150 hover:bg-canvas disabled:opacity-60"
             >
               {health.isFetching ? (
-                <LoaderCircleIcon
-                  className="h-4 w-4 animate-spin"
-                  aria-hidden
-                />
+                <LoaderCircleIcon className="h-4 w-4 animate-spin" aria-hidden />
               ) : (
                 <PlugIcon className="h-4 w-4" aria-hidden />
               )}
@@ -257,7 +332,7 @@ export function Settings() {
           caption="API endpoint registry"
           columns={COLUMNS}
           rows={ENDPOINT_REGISTRY}
-          rowKey={(e) => `${e.method} ${e.path}`}
+          rowKey={(endpoint) => `${endpoint.method} ${endpoint.path}`}
         />
       </section>
     </div>

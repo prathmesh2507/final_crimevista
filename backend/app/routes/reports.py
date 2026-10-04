@@ -13,7 +13,7 @@ router = APIRouter()
 
 
 @router.get("/reports")
-def reports():
+def reports(_token: str = Depends(require_api_token)):
     return list_reports()
 
 
@@ -27,7 +27,7 @@ def create_report(
 
 
 @router.get("/reports/{report_id}/download")
-def download_report(report_id: str):
+def download_report(report_id: str, _token: str = Depends(require_api_token)):
     report = find_report(report_id)
     if report is None or not Path(report["_path"]).is_file():
         raise HTTPException(status_code=404, detail="Report file not found.")

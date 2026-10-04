@@ -288,14 +288,14 @@ export function UploadStatusCard({
             <div className="rounded-lg border border-danger/20 bg-danger-soft p-4">
               <p className="text-sm font-semibold text-danger">Authentication required</p>
               <p className="mt-1 text-sm text-fg">
-                The upload API rejected the request because the admin token is missing or invalid.
+                Sign in as an administrator in Settings to upload a dataset.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
                   to="/settings"
                   className="inline-flex h-9 items-center rounded-lg bg-analytics px-3 text-sm font-medium text-white transition-colors hover:bg-analytics-strong"
                 >
-                  Go to settings
+                  Go to Settings to sign in
                 </Link>
                 <button
                   type="button"

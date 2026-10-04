@@ -3,6 +3,9 @@
  * All paths are relative to API_BASE_URL.
  */
 export const ENDPOINTS = {
+  authLogin: "/auth/login",
+  authLogout: "/auth/logout",
+  authSession: "/auth/session",
   health: "/health",
   filterOptions: "/filters/options",
   dashboardOverview: "/dashboard/overview",
@@ -29,6 +32,27 @@ export interface EndpointSpec {
 }
 
 export const ENDPOINT_REGISTRY: EndpointSpec[] = [
+  {
+    method: "POST",
+    path: "/auth/login",
+    purpose: "Create the administrator's secure browser session",
+    replaces: "Administrator sign-in",
+    status: "implemented",
+  },
+  {
+    method: "POST",
+    path: "/auth/logout",
+    purpose: "End the administrator's browser session",
+    replaces: "Administrator sign-out",
+    status: "implemented",
+  },
+  {
+    method: "GET",
+    path: "/auth/session",
+    purpose: "Check the current administrator session",
+    replaces: "Administrator session status",
+    status: "implemented",
+  },
   {
     method: "GET",
     path: "/health",

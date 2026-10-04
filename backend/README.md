@@ -40,6 +40,7 @@ See the repository-root `DEPLOYMENT.md` for the hosting architecture and environ
 
 ## Endpoints
 
+- `POST /api/auth/login`, `POST /api/auth/logout`, and `GET /api/auth/session`
 - `GET /api/health`
 - `GET /api/filters/options`
 - `GET /api/dashboard/overview`
@@ -51,6 +52,12 @@ See the repository-root `DEPLOYMENT.md` for the hosting architecture and environ
 - `GET /api/upload/config`
 - `POST /api/upload` and `GET /api/upload/{upload_id}/status`
 - `GET /api/reports`, `POST /api/reports/generate`, and `GET /api/reports/{report_id}/download`
+
+Upload and report operations require an administrator session or a direct
+`Authorization: Bearer <API_ADMIN_TOKEN>` credential. Configure
+`API_ADMIN_TOKEN`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` on the backend.
+There is no public registration; successful sign-in creates a 30-day secure
+HttpOnly cookie.
 
 All analytics and listing endpoints accept `start_date`, `end_date`, `crime_type`, `area`, `severity`, and `time_period`; `status`, `city`, and `police_station` are also supported. Multi-value parameters are comma-separated. Crime records accept `page` and `page_size` (maximum 100).
 

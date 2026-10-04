@@ -34,6 +34,8 @@ Set these variables in the Render service:
 APP_ENV=production
 DATABASE_URL=postgresql+psycopg://<user>:<password>@<host>:<port>/<database>
 API_ADMIN_TOKEN=<random-long-secret>
+ADMIN_USERNAME=<administrator-login-name>
+ADMIN_PASSWORD=<strong-administrator-password>
 FRONTEND_URL=https://<your-render-app>.onrender.com
 CORS_ORIGINS=https://<your-render-app>.onrender.com
 DATASET_PATH=/opt/render/project/src/backend/data/initial/nagpur_crime_data.csv
@@ -41,7 +43,10 @@ DATASET_PATH=/opt/render/project/src/backend/data/initial/nagpur_crime_data.csv
 
 Notes:
 
-- `API_ADMIN_TOKEN` is required in production for protected upload/admin requests.
+- `API_ADMIN_TOKEN` is required in production and remains server-side; it signs the administrator session and supports direct bearer-authenticated API use.
+- `ADMIN_USERNAME` and `ADMIN_PASSWORD` provision the single administrator login. There is no public registration.
+- Sign-in issues a 30-day `HttpOnly`, `Secure`, `SameSite=Strict` cookie. The browser never stores the API token or administrator password.
+- Set all three authentication variables in Render before deploying the new login flow. Then sign in from Settings once per browser.
 - `FRONTEND_URL` and `CORS_ORIGINS` should point to the public Render URL.
 - If you use same-origin hosting, a single service origin is often enough; `CORS_ORIGINS` remains optional for local dev.
 

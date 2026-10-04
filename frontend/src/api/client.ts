@@ -1,5 +1,5 @@
-﻿import axios from "axios";
-import { readAuthToken, clearAuthToken } from "../auth/session";
+import axios from "axios";
+import { notifyAuthStateChanged } from "../auth/session";
 import { API_BASE_URL, API_TIMEOUT_MS } from "./config";
 import { normalizeApiError } from "./errors";
 
@@ -7,17 +7,8 @@ import { normalizeApiError } from "./errors";
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT_MS,
+  withCredentials: true,
   headers: { Accept: "application/json" },
-});
-
-apiClient.interceptors.request.use((config) => {
-  const token = readAuthToken();
-  if (token) {
-    config.headers.set("Authorization", `Bearer ${token}`);
-  } else {
-    config.headers.delete("Authorization");
-  }
-  return config;
 });
 
 apiClient.interceptors.response.use(
@@ -25,7 +16,7 @@ apiClient.interceptors.response.use(
   (error: unknown) => {
     const normalized = normalizeApiError(error);
     if (normalized.status === 401) {
-      clearAuthToken();
+      notifyAuthStateChanged();
     }
     return Promise.reject(normalized);
   },

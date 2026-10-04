@@ -34,12 +34,14 @@ Required environment variables:
 
 - `APP_ENV=production`
 - `DATABASE_URL` (Render-managed Postgres URL)
-- `API_ADMIN_TOKEN` (required for protected admin/upload endpoints)
+- `API_ADMIN_TOKEN` (server-side secret required for protected admin/upload endpoints)
+- `ADMIN_USERNAME` and `ADMIN_PASSWORD` (server-provisioned administrator login; there is no public registration)
 - `FRONTEND_URL` (public frontend origin, optional in same-origin deployments)
 - `CORS_ORIGINS` (comma-separated list of approved origins)
 - `DATASET_PATH` (optional if the default bundled dataset is used)
 
 Render will set the runtime port at `$PORT`; the app must bind to `0.0.0.0:$PORT`.
+The browser signs in once and uses a 30-day secure, HttpOnly session cookie; it does not store the API token.
 
 ## Deployment docs
 

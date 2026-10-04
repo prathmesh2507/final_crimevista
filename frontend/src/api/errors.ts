@@ -3,7 +3,7 @@ import type { ApiErrorKind } from '../types/api';
 
 const FRIENDLY_MESSAGES: Record<ApiErrorKind, string> = {
   bad_request: "The request couldn't be processed. Check the selected filters and try again.",
-  unauthorized: 'Authentication required. Enter the administrator token in Settings and try again.',
+  unauthorized: 'Authentication required. Sign in as an administrator in Settings, then try again.',
   forbidden: "You don't have permission to access this data.",
   not_found: 'The requested data could not be found.',
   validation: 'Some of the submitted values were rejected by the server.',
