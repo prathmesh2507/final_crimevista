@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
+import { SparklesIcon } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
+import { AIChatDrawer } from '../ai/AIChatDrawer';
 import { MobileNav } from './MobileNav';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 
 export function Layout() {
   const [collapsed, setCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1280);
+  const [chatOpen, setChatOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen w-full bg-canvas">
@@ -22,6 +25,17 @@ export function Layout() {
         </main>
       </div>
       <MobileNav />
-    </div>);
-
+      <div className="fixed bottom-5 right-5 z-50">
+        <button
+          type="button"
+          onClick={() => setChatOpen(true)}
+          aria-label="Open CrimeVista AI assistant"
+          className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-analytics text-white shadow-pop transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-analytics focus-visible:ring-offset-2"
+        >
+          <SparklesIcon className="h-6 w-6" aria-hidden />
+        </button>
+      </div>
+      <AIChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
+    </div>
+  );
 }

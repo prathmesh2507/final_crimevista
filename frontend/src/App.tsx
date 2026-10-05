@@ -9,6 +9,7 @@ import { AreaExplorer } from "./pages/AreaExplorer";
 import { CrimeMap } from "./pages/CrimeMap";
 import { Dashboard } from "./pages/Dashboard";
 import { DataUpload } from "./pages/DataUpload";
+import { Help } from "./pages/Help";
 import { Hotspots } from "./pages/Hotspots";
 import { Landing } from "./pages/Landing";
 import { NotFound } from "./pages/NotFound";
@@ -36,6 +37,7 @@ export function App() {
                 <Route path="/data-upload" element={<Navigate to="/upload" replace />} />
                 <Route path="/upload" element={<DataUpload />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/help" element={<Help />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="*" element={<NotFound />} />
               </Route>

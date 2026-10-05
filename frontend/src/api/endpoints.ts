@@ -20,6 +20,7 @@ export const ENDPOINTS = {
     `/upload/${encodeURIComponent(uploadId)}/status`,
   reports: "/reports",
   generateReport: "/reports/generate",
+  chat: "/chat",
 } as const;
 
 export interface EndpointSpec {

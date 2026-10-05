@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 
 from .database import BASE_DIR
 from .services.data_service import initialize_database
-from .routes import analytics, auth, crimes, dashboard, filters, health, map, reports, upload
+from .routes import analytics, auth, chat, crimes, dashboard, filters, health, map, reports, upload
 
 load_dotenv(BASE_DIR / ".env")
 
@@ -51,6 +51,7 @@ for route_module in (
     map,
     upload,
     reports,
+    chat,
 ):
     app.include_router(route_module.router, prefix="/api")
 
