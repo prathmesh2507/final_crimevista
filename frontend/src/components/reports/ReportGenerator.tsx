@@ -21,7 +21,7 @@ export function ReportGenerator({
 }: ReportGeneratorProps) {
   const { filters } = useFilters();
   const { data: options, isLoading: optionsLoading } = useFilterOptions();
-  const [title, setTitle] = useState("Nagpur crime summary");
+  const [title, setTitle] = useState("City crime summary");
   const [startDate, setStartDate] = useState<string | null>(filters.startDate);
   const [endDate, setEndDate] = useState<string | null>(filters.endDate);
   const [area, setArea] = useState(

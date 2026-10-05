@@ -24,7 +24,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {!collapsed &&
         <div className="min-w-0">
             <p className="text-[15px] font-semibold tracking-tight text-white">CrimeVista</p>
-            <p className="truncate text-xs text-ink-400">Nagpur Urban Safety</p>
+            <p className="truncate text-xs text-ink-400">Global Safety Intelligence</p>
           </div>
         }
       </div>

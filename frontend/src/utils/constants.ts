@@ -31,8 +31,8 @@ export const SEVERITY_COLORS: Record<string, string> = {
 export const FALLBACK_SEVERITY_COLOR = "#64748b";
 
 /** Map viewport only — never used as incident data. */
-export const MAP_DEFAULT_CENTER: [number, number] = [21.1458, 79.0882];
-export const MAP_DEFAULT_ZOOM = 12;
+export const MAP_DEFAULT_CENTER: [number, number] = [20, 0];
+export const MAP_DEFAULT_ZOOM = 2;
 export const MAP_TILE_URL =
   "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 export const MAP_DARK_TILE_URL =

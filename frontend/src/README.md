@@ -1,6 +1,6 @@
 # CrimeVista — Frontend
 
-Nagpur Crime Intelligence & Urban Safety Analytics Platform. React + TypeScript + Tailwind + TanStack Query + Recharts + Leaflet.
+Global Crime Intelligence & Urban Safety Analytics Platform. React + TypeScript + Tailwind + TanStack Query + Recharts + Google Maps JavaScript API.
 
 ```
 EXISTING BACKEND → REST API → api/ (service layer) → hooks/ (React Query) → components/ → charts / map / tables

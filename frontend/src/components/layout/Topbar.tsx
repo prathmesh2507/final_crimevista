@@ -22,7 +22,7 @@ export function Topbar() {
             CrimeVista
           </p>
           <p className="hidden truncate text-xs text-muted sm:block">
-            Nagpur Crime Intelligence &amp; Urban Safety Analytics Platform
+            Global Crime Intelligence &amp; Safety Analytics Platform
           </p>
         </div>
       </div>

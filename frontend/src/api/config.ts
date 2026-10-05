@@ -12,6 +12,6 @@ export const API_BASE_URL = (
 export const API_TIMEOUT_MS = Number(env.VITE_API_TIMEOUT_MS ?? 30000);
 
 /** CARTO raster basemap key; exposed in tile requests and should be host-restricted. */
-export const CARTO_API_KEY = env.VITE_CARTO_API_KEY ?? "";
+export const GOOGLE_MAPS_API_KEY = env.VITE_GOOGLE_MAPS_API_KEY ?? env.VITE_MAPS_API_KEY ?? "";
 
 export const LEGACY_AUTH_TOKEN_STORAGE_KEY = "crimevista.authToken";

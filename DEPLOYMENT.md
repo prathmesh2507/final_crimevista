@@ -38,7 +38,7 @@ ADMIN_USERNAME=<administrator-login-name>
 ADMIN_PASSWORD=<strong-administrator-password>
 FRONTEND_URL=https://<your-render-app>.onrender.com
 CORS_ORIGINS=https://<your-render-app>.onrender.com
-DATASET_PATH=/opt/render/project/src/backend/data/initial/nagpur_crime_data.csv
+DATASET_PATH=/opt/render/project/src/backend/data/initial/your_city_crime_data.csv
 ```
 
 Notes:

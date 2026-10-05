@@ -31,7 +31,7 @@ def _build_fallback_response(message: str, context: dict[str, Any] | None = None
         "risk": "Risk levels summarise where the concentration and severity of incidents are highest. Treat the top hotspots as priority areas for deeper review, patrol, or investigation planning.",
         "severity": "Severity reflects how serious or impactful an incident is. Critical and high-severity incidents usually warrant faster attention, while low-severity incidents may still matter when clustered in a small area.",
         "filters": "Filters help narrow the active dataset to a relevant period, area, crime category, severity, or time-of-day slice. Resetting filters restores the full citywide view.",
-        "faq": "CrimeVista is built for Nagpur crime intelligence and works from the existing dataset. When no external AI provider is configured, the assistant answers from the app's built-in crime intelligence guidance and should still help with navigation, filters, and KPIs.",
+        "faq": "CrimeVista is built for city-scale crime intelligence and works from the active dataset loaded into the app. When no external AI provider is configured, the assistant answers from the app's built-in crime intelligence guidance and still helps with navigation, filters, and KPIs.",
     }
 
     answer = knowledge.get(page, knowledge["faq"]) if page in knowledge else knowledge["faq"]
@@ -110,7 +110,7 @@ async def generate_chat_response(payload: dict[str, Any]) -> dict[str, Any]:
                     {
                         "role": "system",
                         "content": (
-                            "You are CrimeVista AI, a crime intelligence assistant for Nagpur city safety analytics. "
+                            "You are CrimeVista AI, a city crime intelligence assistant for global safety analytics. "
                             "Answer concisely using the app's existing metrics, filters, hotspots, trend analysis, "
                             "and reporting concepts. If the user asks about configuration or features that the app does not support, "
                             "explain the built-in CrimeVista workflow instead."

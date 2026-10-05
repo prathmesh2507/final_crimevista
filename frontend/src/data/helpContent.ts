@@ -131,7 +131,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     title: 'FAQ',
     summary: 'Answering the common questions from first-time users.',
     bullets: [
-      'CrimeVista is designed for Nagpur crime intelligence and uses the active dataset in the app.',
+      'CrimeVista is designed for city-scale crime intelligence and works with the active dataset uploaded into the app.',
       'If the AI provider is not configured, the built-in fallback explains the app without failing.',
       'The Help page explains each section so you can navigate the platform with less trial and error.',
     ],

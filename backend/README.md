@@ -16,7 +16,7 @@ Copy-Item .env.example .env
 
 ## Dataset and database
 
-The default dataset is `../frontend/nagpur_demo_crime_data.csv`, relative to this directory. On first startup, the backend creates `data/crimevista.db` and imports valid rows using `crime_id` as the unique key. Later startups reuse the existing records without reimporting. Set `DATASET_PATH` or `DATABASE_URL` in `.env` to change either location.
+The default dataset is a bundled demo file in this repository; on first startup the backend creates `data/crimevista.db` and imports valid rows using `crime_id` as the unique key. Later startups reuse the existing records without reimporting. Set `DATASET_PATH` or `DATABASE_URL` in `.env` to point to your own city dataset or a different database location.
 
 To initialize manually, run `python scripts/initialize_data.py` from `backend/`.
 
