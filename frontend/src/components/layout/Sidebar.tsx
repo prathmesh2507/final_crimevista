@@ -30,7 +30,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate, variant = 'rail' }: S
         {!collapsed &&
         <div className="min-w-0 leading-tight">
             <p className="text-sm font-semibold tracking-[0.02em]">CRIMEVISTA</p>
-            <p className="truncate text-2xs text-rail-muted">Nagpur crime intelligence</p>
+            <p className="truncate text-2xs text-rail-muted">Urban crime intelligence</p>
           </div>
         }
       </div>
@@ -167,6 +167,6 @@ function sourceLabel(source: string) {
 
 function sourceHint(source: string) {
   if (source === 'live') return 'CrimeVista server';
-  if (source === 'local') return 'Bundled Nagpur dataset';
+  if (source === 'local') return 'Configured example dataset';
   return 'Checking data service';
 }

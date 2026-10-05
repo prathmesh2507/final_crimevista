@@ -9,7 +9,7 @@ export function DataScope({ meta, suffix }: {meta?: DataMeta;suffix?: string;}) 
   return (
     <span>
       <span className="font-medium tabular-nums text-fg">{formatNumber(meta.filtered)}</span>
-      {activeCount > 0 ? <> of {formatNumber(meta.total)} records match your filters</> : <> recorded incidents across Nagpur</>}
+      {activeCount > 0 ? <> of {formatNumber(meta.total)} records match your filters</> : <> recorded incidents in the selected dataset</>}
       {suffix && <span className="text-subtle"> · {suffix}</span>}
     </span>);
 

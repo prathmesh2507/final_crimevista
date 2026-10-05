@@ -97,7 +97,7 @@ export function IntelMap({
 
   return (
     <div ref={wrapperRef} className={cn('relative isolate h-full w-full overflow-hidden bg-sunken', className)}>
-      <div ref={containerRef} className="h-full w-full" role="region" aria-label="Crime map of Nagpur" />
+      <div ref={containerRef} className="h-full w-full" role="region" aria-label="Urban crime map" />
 
       <AnimatePresence>
         {!map.ready && !map.error &&

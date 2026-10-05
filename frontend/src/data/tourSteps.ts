@@ -11,7 +11,7 @@ export interface TourStep {
 export const TOUR_STEPS: TourStep[] = [
 {
   title: 'CrimeVista turns incident records into geographic intelligence',
-  body: 'Every view is computed from the active Nagpur dataset — counts, trends, hotspots and area profiles. Nothing is estimated or invented.',
+  body: 'Counts, trends, hotspots and area profiles are calculated from the active dataset. Interpret results within that dataset’s geographic coverage, date range and update cadence.',
   route: '/dashboard',
   icon: LayoutDashboardIcon
 },

@@ -21,6 +21,7 @@ class AdminAuthenticationTests(unittest.TestCase):
                 "API_ADMIN_TOKEN": "test-api-secret",
                 "ADMIN_USERNAME": "test-admin",
                 "ADMIN_PASSWORD": "test-password",
+                "ADMIN_USERS": "",
             },
             clear=False,
         )
@@ -84,6 +85,48 @@ class AdminAuthenticationTests(unittest.TestCase):
         self.assertEqual(logout.status_code, 200)
         self.assertEqual(self.client.get("/api/auth/session").json(), {"authenticated": False})
         self.assertEqual(self.client.get("/api/protected").status_code, 401)
+
+    def test_multiple_admin_accounts_can_sign_in_with_individual_passwords(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "ADMIN_USERS": (
+                    '[{"username":"first-admin","password":"first-password"},'
+                    '{"username":"second-admin","password":"second-password"}]'
+                )
+            },
+        ):
+            for username, password in (
+                ("first-admin", "first-password"),
+                ("second-admin", "second-password"),
+            ):
+                with self.subTest(username=username):
+                    response = self.client.post(
+                        "/api/auth/login",
+                        json={"username": username, "password": password},
+                    )
+                    self.assertEqual(response.status_code, 200)
+
+            wrong_password = self.client.post(
+                "/api/auth/login",
+                json={"username": "first-admin", "password": "second-password"},
+            )
+            unknown_user = self.client.post(
+                "/api/auth/login",
+                json={"username": "unknown-admin", "password": "first-password"},
+            )
+            self.assertEqual(wrong_password.status_code, 401)
+            self.assertEqual(unknown_user.status_code, 401)
+
+    def test_malformed_admin_users_configuration_is_reported(self) -> None:
+        for configured_users in ("not-json", "[]", '[{"username":"missing-password"}]'):
+            with self.subTest(configured_users=configured_users):
+                with patch.dict(os.environ, {"ADMIN_USERS": configured_users}):
+                    response = self.client.post(
+                        "/api/auth/login",
+                        json={"username": "test-admin", "password": "test-password"},
+                    )
+                self.assertEqual(response.status_code, 503)
 
     def test_server_token_remains_a_valid_direct_bearer_credential(self) -> None:
         response = self.client.get(

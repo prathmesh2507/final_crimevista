@@ -34,7 +34,7 @@ export function Reports() {
   const queryClient = useQueryClient();
   const history = useReportHistory();
 
-  const [title, setTitle] = useState('Nagpur crime intelligence briefing');
+  const [title, setTitle] = useState('Urban crime intelligence briefing');
   const [presetId, setPresetId] = useState('briefing');
   const [sections, setSections] = useState<ReportSection[]>(REPORT_PRESETS[0].sections);
   const [format, setFormat] = useState<ReportFormat>(source === 'local' ? 'csv' : 'pdf');

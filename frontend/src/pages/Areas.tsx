@@ -56,7 +56,7 @@ export function Areas() {
 
   return (
     <div className="pb-10">
-      <PageHeader title="Area Explorer" description="Investigate one area against the rest of Nagpur">
+      <PageHeader title="Area Explorer" description="Explore an area and compare it with others in the dataset">
         <FilterBar exclude={['area']} />
       </PageHeader>
 

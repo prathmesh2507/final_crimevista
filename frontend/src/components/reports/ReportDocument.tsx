@@ -176,7 +176,7 @@ export function ReportDocument({ title, format, sections, scope, overview, hotsp
         }
       </div>
       <footer className="flex justify-between border-t border-[#E3E8EF] px-8 py-3 text-[10px] text-[#7A889C]">
-        <span>CrimeVista · Nagpur urban safety intelligence</span>
+        <span>CrimeVista · Urban crime intelligence</span>
         <span>{overview?.meta.lastUpdated ? `Data updated ${formatDate(overview.meta.lastUpdated.slice(0, 10))}` : ''}</span>
       </footer>
     </article>);

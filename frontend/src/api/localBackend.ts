@@ -1,6 +1,6 @@
 /**
  * In-browser mirror of the FastAPI routes. Used only when the live API is unreachable.
- * Every response is computed from the real bundled Nagpur dataset with the same logic
+ * Every response is computed from the configured fallback dataset with the same logic
  * as the backend services, and returns the same raw JSON contract.
  */
 import Papa from 'papaparse';

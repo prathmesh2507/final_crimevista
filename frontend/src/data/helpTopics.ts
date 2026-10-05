@@ -18,7 +18,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   summary: 'An analytics workspace that turns incident records into geographic intelligence.',
   body: [
   'CrimeVista reads a table of recorded incidents — date, area, crime type, severity, and location — and shows how much is happening, where it concentrates, and how it changes over time.',
-  'Every number on screen is calculated from the active dataset. There are no estimates, predictions or invented metrics.'],
+  'Every number on screen is calculated from the active dataset. Interpret results within that dataset’s geographic coverage, date range and update cadence; CrimeVista does not turn them into crime forecasts.'],
 
   route: { to: '/dashboard', label: 'Open the dashboard' },
   visual: 'flow'
@@ -27,10 +27,10 @@ export const HELP_TOPICS: HelpTopic[] = [
   id: 'data-source',
   category: 'Getting started',
   title: 'Where does the data come from?',
-  summary: 'The active dataset, bundled or uploaded by an administrator.',
+  summary: 'The configured fallback dataset or a dataset uploaded by an administrator.',
   body: [
-  'Out of the box, CrimeVista loads a bundled Nagpur dataset of roughly 16,000 records (January 2022 – June 2025). Its records are labelled as synthetic demo data in their descriptions — treat it as a realistic sample, not an official police record.',
-  'Administrators can replace it with their own CSV from Upload Data. All pages then reflect the new records.'],
+  'If the API is unavailable, the browser loads the fallback CSV configured for this project. The current example contains roughly 16,000 Nagpur records dated January 2022 – June 2025. It is provided to explore CrimeVista and is not a live feed or an official police record.',
+  'Administrators can replace the active dataset with an authorized CSV from Upload Data. All pages then reflect the new records. Use data that is appropriate for the city or region you want to analyze.'],
 
   visual: null
 },
@@ -97,9 +97,9 @@ export const HELP_TOPICS: HelpTopic[] = [
   id: 'areas',
   category: 'Analysis',
   title: 'Exploring an area',
-  summary: 'Profile a single area and compare it with the rest of the city.',
+  summary: 'Profile a single area and compare it with other areas in the dataset.',
   body: [
-  'Pick an area to see its incident volume, share of the city, high-severity incidents, top crime type, month-over-month change, monthly trend and time-of-day pattern.',
+  'Pick an area to see its incident volume, share of records, high-severity incidents, top crime type, month-over-month change, monthly trend and time-of-day pattern.',
   '“Compared with other areas” places it among the top areas under your filters. “Focus all views” applies the area as a filter everywhere.'],
 
   route: { to: '/areas', label: 'Open Area Explorer' },

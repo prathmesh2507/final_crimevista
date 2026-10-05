@@ -104,7 +104,7 @@ export function Settings() {
             </dl>
             <p className="rounded-lg bg-raised px-4 py-3 text-sm leading-relaxed text-muted">
               {source === 'local' ?
-              'The CrimeVista server could not be reached from this origin, so the same analytics (filters, KPIs, trends, hotspot ranking, area profiles) run in your browser on the bundled Nagpur dataset. Uploads stay in this browser session; PDF and Excel reports need the server.' :
+              'The CrimeVista server could not be reached from this origin, so the same analytics (filters, KPIs, trends, hotspot ranking, area profiles) run in your browser on the configured fallback CSV. The current example contains Nagpur records dated January 2022–June 2025; it is not a live or official feed. Uploads stay in this browser session; PDF and Excel reports need the server.' :
               'All analytics are computed by the CrimeVista FastAPI service. Filters are sent as query parameters, and results are cached briefly in the browser.'}
             </p>
           </div>

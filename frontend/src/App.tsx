@@ -10,6 +10,7 @@ import { CrimeMap } from "./pages/CrimeMap";
 import { Dashboard } from "./pages/Dashboard";
 import { Help } from "./pages/Help";
 import { Hotspots } from "./pages/Hotspots";
+import { Landing } from "./pages/Landing";
 import { NotFound } from "./pages/NotFound";
 import { Reports } from "./pages/Reports";
 import { Settings } from "./pages/Settings";
@@ -37,8 +38,8 @@ export function App() {
           <FilterProvider>
             <AssistantProvider>
               <Routes>
+                <Route path="/" element={<Landing />} />
                 <Route element={<AppShell />}>
-                  <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/overview" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/map" element={<CrimeMap />} />
