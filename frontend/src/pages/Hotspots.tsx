@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPinOffIcon } from 'lucide-react';
 import { AreaBarChart } from '../components/charts/AreaBarChart';
@@ -74,7 +74,14 @@ export function Hotspots() {
                 <section className="rounded-xl border border-line bg-surface p-3 shadow-card">
                   <h2 className="px-2 pb-3 pt-1 text-sm font-semibold text-fg">Incident concentration</h2>
                   {points.length ?
-              <MapView ariaLabel="Hotspot map" points={points} onSelect={openArea} maxFitZoom={13} className="h-[380px] lg:h-[480px]" /> :
+              <MapView
+                ariaLabel="Hotspot map"
+                points={points}
+                hotspots={hotspots}
+                onSelect={openArea}
+                maxFitZoom={13}
+                showExperienceControls
+                className="h-[380px] lg:h-[480px]" /> :
 
               <EmptyState compact icon={MapPinOffIcon} title="Location data unavailable." description="The backend returned hotspots without coordinates." />
               }

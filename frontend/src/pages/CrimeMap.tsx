@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPinOffIcon } from 'lucide-react';
 import { DataBoundary } from '../components/common/DataBoundary';
 import { EmptyState } from '../components/common/EmptyState';
@@ -11,16 +12,17 @@ import { MapView, type MapPoint } from '../components/map/MapView';
 import { useCrimeMap } from '../hooks/useCrimeMap';
 import { useFilterOptions } from '../hooks/useFilterOptions';
 import { useFilters } from '../hooks/useFilters';
-import { cn } from '../utils/cn';
+import { useHotspots } from '../hooks/useHotspots';
 import { severityColor } from '../utils/colors';
 import { formatNumber } from '../utils/formatters';
 
 export function CrimeMap() {
+  const navigate = useNavigate();
   const { resetFilters } = useFilters();
   const { data: options } = useFilterOptions();
   const { data, isLoading, isFetching, error, refetch } = useCrimeMap();
+  const { data: hotspotData, error: hotspotError, refetch: refetchHotspots } = useHotspots();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [cluster, setCluster] = useState(true);
 
   const points = useMemo<MapPoint[]>(
     () =>
@@ -59,26 +61,30 @@ export function CrimeMap() {
                   <h2 className="text-sm font-semibold text-fg">
                     {formatNumber(points.length)} incidents plotted
                   </h2>
-                  <button
-                type="button"
-                role="switch"
-                aria-checked={cluster}
-                onClick={() => setCluster((c) => !c)}
-                className="inline-flex items-center gap-2 text-sm text-muted">
-                
-                    <span className={cn('relative h-5 w-9 rounded-full transition-colors duration-150', cluster ? 'bg-analytics' : 'bg-line')}>
-                      <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-150', cluster ? 'translate-x-[18px]' : 'translate-x-0.5')} />
-                    </span>
-                    Group nearby markers
-                  </button>
+                  <span className="text-xs text-muted">Choose a 3D city view or heat intelligence layers on the map</span>
                 </div>
+                {hotspotError && (
+                  <div role="alert" className="mx-2 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-fg">
+                    Area hotspot counts are unavailable, so 3D area columns may be missing.
+                    <button type="button" onClick={() => refetchHotspots()} className="font-semibold text-analytics hover:underline">
+                      Retry hotspot data
+                    </button>
+                  </div>
+                )}
                 <MapView
               ariaLabel="Crime incident map"
               points={points}
               boundaries={data.boundaries}
-              cluster={cluster}
+              hotspots={hotspotData?.hotspots}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={(id, kind) => {
+                if (kind === 'area') {
+                  navigate(`/areas?area=${encodeURIComponent(id)}`);
+                  return;
+                }
+                setSelectedId(id);
+              }}
+              showExperienceControls
               className="h-[420px] sm:h-[520px] lg:h-[620px]" />
             
               </section>
