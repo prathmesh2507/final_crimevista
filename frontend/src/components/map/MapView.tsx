@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useRef } from "react";
-import { Loader } from '@googlemaps/js-api-loader';
-import { GOOGLE_MAPS_API_KEY } from "../../api/config";
-import { useTheme } from "../../contexts/theme";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { AreaBoundary } from "../../types/crime";
 import { cn } from "../../utils/cn";
 import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM } from "../../utils/constants";
@@ -26,10 +25,64 @@ interface MapViewProps {
   maxFitZoom?: number;
 }
 
-const CLUSTER_CELL_PX = 64;
+const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const NAGPUR_CENTER: [number, number] = [79.0882, 21.1458];
 const CLUSTER_MIN_POINTS = 200;
+const CLUSTER_CELL_DEG = 0.005;
 
-/** Renders backend-supplied coordinates only. Clustering is purely visual. */
+function createMarkerElement(point: MapPoint, isSelected: boolean, clusterMarker = false) {
+  const element = document.createElement("button");
+  element.type = "button";
+  element.setAttribute("aria-label", point.label ?? "Map location");
+  element.style.border = "0";
+  element.style.cursor = "pointer";
+  element.style.position = "relative";
+  element.style.display = "flex";
+  element.style.alignItems = "center";
+  element.style.justifyContent = "center";
+  element.style.borderRadius = "9999px";
+  element.style.background = point.color;
+  element.style.boxShadow = isSelected
+    ? "0 0 0 3px rgba(255,255,255,0.9), 0 10px 24px rgba(15, 23, 42, 0.32)"
+    : "0 8px 18px rgba(15, 23, 42, 0.2)";
+  element.style.width = clusterMarker ? "34px" : `${Math.max(14, (point.radius ?? 8) + (isSelected ? 6 : 0)) * 2}px`;
+  element.style.height = clusterMarker ? "34px" : `${Math.max(14, (point.radius ?? 8) + (isSelected ? 6 : 0)) * 2}px`;
+  element.style.color = "#ffffff";
+  element.style.fontSize = clusterMarker ? "12px" : "10px";
+  element.style.fontWeight = "700";
+  element.style.lineHeight = "1";
+
+  if (clusterMarker) {
+    element.style.background = "#2456d6";
+    element.textContent = "99+";
+  } else {
+    element.style.border = isSelected ? "2px solid #0d1527" : "1.5px solid rgba(255,255,255,0.8)";
+    element.style.opacity = "0.96";
+  }
+
+  return element;
+}
+
+function liftBoundaryFeatures(boundaries: AreaBoundary[]): GeoJSON.Feature[] {
+  return boundaries.flatMap((boundary) => {
+    const geometry = boundary.geometry as GeoJSON.GeoJsonObject;
+
+    if (geometry.type === "Feature") {
+      return [geometry as GeoJSON.Feature];
+    }
+
+    if (geometry.type === "FeatureCollection") {
+      return geometry.features as GeoJSON.Feature[];
+    }
+
+    return [{
+      type: "Feature",
+      geometry: geometry as GeoJSON.Geometry,
+      properties: { area: boundary.area },
+    }];
+  });
+}
+
 export function MapView({
   points,
   ariaLabel,
@@ -40,68 +93,128 @@ export function MapView({
   className,
   maxFitZoom = 14,
 }: MapViewProps) {
-  const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const markerLayerRef = useRef<Array<google.maps.Marker>>([]);
-  const boundaryLayerRef = useRef<google.maps.Data | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerLayerRef = useRef<Array<maplibregl.Marker>>([]);
+  const [mapMode, setMapMode] = useState<"2d" | "3d">("3d");
   const stateRef = useRef({ points, cluster, selectedId });
   const onSelectRef = useRef(onSelect);
+
   stateRef.current = { points, cluster, selectedId };
   onSelectRef.current = onSelect;
 
   const clearMapLayers = useCallback(() => {
-    markerLayerRef.current.forEach((marker) => marker.setMap(null));
+    markerLayerRef.current.forEach((marker) => marker.remove());
     markerLayerRef.current = [];
-
-    if (boundaryLayerRef.current) {
-      boundaryLayerRef.current.forEach((feature) => boundaryLayerRef.current?.remove(feature));
-    }
   }, []);
+
+  const resetView = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    map.flyTo({
+      center: NAGPUR_CENTER,
+      zoom: 11.5,
+      pitch: 58,
+      bearing: 18,
+      essential: true,
+    });
+  }, []);
+
+  const updateBoundaries = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const boundaryData = {
+      type: "FeatureCollection",
+      features: liftBoundaryFeatures(boundaries),
+    } as GeoJSON.FeatureCollection;
+
+    const existing = map.getSource("crime-boundaries") as maplibregl.GeoJSONSource | undefined;
+    if (existing) {
+      existing.setData(boundaryData);
+      return;
+    }
+
+    if (!boundaryData.features.length) return;
+
+    map.addSource("crime-boundaries", {
+      type: "geojson",
+      data: boundaryData,
+    });
+
+    map.addLayer({
+      id: "crime-boundary-fill",
+      type: "fill",
+      source: "crime-boundaries",
+      paint: {
+        "fill-color": "#2456d6",
+        "fill-opacity": 0.05,
+      },
+    });
+
+    map.addLayer({
+      id: "crime-boundary-line",
+      type: "line",
+      source: "crime-boundaries",
+      paint: {
+        "line-color": "#2456d6",
+        "line-width": 1.5,
+        "line-opacity": 0.9,
+      },
+    });
+  }, [boundaries]);
 
   const draw = useCallback(() => {
     const map = mapRef.current;
-    if (!map || !window.google) return;
+    if (!map) return;
 
     clearMapLayers();
-
     const { points: all, cluster: clustering, selectedId: selected } = stateRef.current;
-    const bounds = new google.maps.LatLngBounds();
-    const visible = all.filter((p) => {
-      const latLng = new google.maps.LatLng(p.lat, p.lng);
-      return !!map.getBounds()?.contains(latLng);
+    const bounds = new maplibregl.LngLatBounds();
+
+    const fitBoundsIfNeeded = () => {
+      const pointsWithLocation = all.filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+      if (!pointsWithLocation.length) {
+        resetView();
+        return;
+      }
+
+      pointsWithLocation.forEach((point) => bounds.extend([point.lng, point.lat]));
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, {
+          padding: 32,
+          maxZoom: maxFitZoom,
+          duration: 0,
+          animate: false,
+        });
+      }
+    };
+
+    const visible = all.filter((point) => {
+      const latLng = new maplibregl.LngLat(point.lng, point.lat);
+      return map.getBounds().contains(latLng);
     });
 
-    const addPoint = (p: MapPoint) => {
-      const isSelected = p.id === selected;
-      const marker = new google.maps.Marker({
-        position: { lat: p.lat, lng: p.lng },
-        map,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: (p.radius ?? 6) + (isSelected ? 3 : 0),
-          fillColor: p.color,
-          fillOpacity: 0.9,
-          strokeColor: isSelected ? '#0d1527' : '#ffffff',
-          strokeWeight: isSelected ? 3 : 1.5,
-        },
-        title: p.label,
-      });
-      marker.addListener('click', () => onSelectRef.current?.(p.id));
+    const addPoint = (point: MapPoint) => {
+      const isSelected = point.id === selected;
+      const markerElement = createMarkerElement(point, isSelected, false);
+      const marker = new maplibregl.Marker({ element: markerElement, anchor: "center" })
+        .setLngLat([point.lng, point.lat])
+        .addTo(map);
+
+      markerElement.addEventListener("click", () => onSelectRef.current?.(point.id));
       markerLayerRef.current.push(marker);
-      bounds.extend({ lat: p.lat, lng: p.lng });
+      bounds.extend([point.lng, point.lat]);
     };
 
     if (clustering && visible.length > CLUSTER_MIN_POINTS && map.getZoom() < 16) {
       const cells = new Map<string, MapPoint[]>();
-      visible.forEach((p) => {
-        const projection = map.getProjection();
-        if (!projection) return;
-        const point = projection.fromLatLngToPoint(new google.maps.LatLng(p.lat, p.lng));
-        const key = `${Math.floor(point.x / CLUSTER_CELL_PX)}:${Math.floor(point.y / CLUSTER_CELL_PX)}`;
+      visible.forEach((point) => {
+        const key = `${Math.floor(point.lat / CLUSTER_CELL_DEG)}:${Math.floor(point.lng / CLUSTER_CELL_DEG)}`;
         const bucket = cells.get(key);
-        if (bucket) bucket.push(p);
-        else cells.set(key, [p]);
+        if (bucket) bucket.push(point);
+        else cells.set(key, [point]);
       });
 
       cells.forEach((group) => {
@@ -110,29 +223,24 @@ export function MapView({
           return;
         }
 
-        const lat = group.reduce((s, p) => s + p.lat, 0) / group.length;
-        const lng = group.reduce((s, p) => s + p.lng, 0) / group.length;
-        const marker = new google.maps.Marker({
-          position: { lat, lng },
-          map,
-          label: {
-            text: String(group.length),
-            color: '#ffffff',
-            fontSize: '12px',
-            fontWeight: '700',
-          },
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 18 + Math.min(18, group.length * 1.2),
-            fillColor: '#2456d6',
-            fillOpacity: 0.9,
-            strokeColor: '#ffffff',
-            strokeWeight: 2,
-          },
-        });
-        marker.addListener('click', () => {
-          map.setZoom(Math.min(map.getZoom() + 2, 18));
-          map.setCenter({ lat, lng });
+        const lat = group.reduce((sum, point) => sum + point.lat, 0) / group.length;
+        const lng = group.reduce((sum, point) => sum + point.lng, 0) / group.length;
+        const markerElement = createMarkerElement({
+          id: `${group[0].id}-${group.length}`,
+          lat,
+          lng,
+          color: "#2456d6",
+          radius: 16,
+          label: `${group.length} incidents`,
+        }, false, true);
+
+        const marker = new maplibregl.Marker({ element: markerElement, anchor: "center" })
+          .setLngLat([lng, lat])
+          .addTo(map);
+
+        markerElement.textContent = String(group.length);
+        markerElement.addEventListener("click", () => {
+          map.flyTo({ center: [lng, lat], zoom: Math.min(map.getZoom() + 2, 18), essential: true });
         });
         markerLayerRef.current.push(marker);
       });
@@ -140,130 +248,145 @@ export function MapView({
       visible.forEach(addPoint);
     }
 
-    if (!bounds.isEmpty()) {
-      map.fitBounds(bounds, { top: 32, right: 32, bottom: 32, left: 32, maxZoom: maxFitZoom });
-    }
-  }, [clearMapLayers, maxFitZoom]);
+    fitBoundsIfNeeded();
+  }, [clearMapLayers, maxFitZoom, resetView]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    if (!GOOGLE_MAPS_API_KEY) {
-      container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;background:#0b1724;color:#a9b8b7;font:600 14px/1.4 IBM Plex Sans, sans-serif;">Add VITE_GOOGLE_MAPS_API_KEY to render the Google map.</div>';
-      return;
-    }
+    const map = new maplibregl.Map({
+      container,
+      style: OPENFREEMAP_STYLE,
+      center: NAGPUR_CENTER,
+      zoom: MAP_DEFAULT_ZOOM,
+      pitch: 58,
+      bearing: 18,
+      antialias: true,
+      attributionControl: true,
+    });
 
-    let cancelled = false;
+    mapRef.current = map;
 
-    const loadMap = async () => {
-      const loader = new Loader({
-        apiKey: GOOGLE_MAPS_API_KEY,
-        version: 'weekly',
-        libraries: ['marker'],
-      });
+    const handleResize = () => map.resize();
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(container);
+
+    map.on("load", () => {
+      try {
+        map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true }), "top-right");
+        map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+      } catch {
+        // Optional controls are non-critical and should not block the map experience.
+      }
 
       try {
-        await loader.load();
-        if (cancelled || !container) return;
-
-        const map = new google.maps.Map(container, {
-          center: MAP_DEFAULT_CENTER,
-          zoom: MAP_DEFAULT_ZOOM,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-          styles: theme === 'dark' ? [
-            { elementType: 'geometry', stylers: [{ color: '#111827' }] },
-            { elementType: 'labels.text.fill', stylers: [{ color: '#f3f4f6' }] },
-            { elementType: 'labels.text.stroke', stylers: [{ color: '#111827' }] },
-            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#374151' }] },
-            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
-          ] : undefined,
+        map.addSource("terrain-rgb", {
+          type: "raster-dem",
+          tiles: ["https://demotiles.maplibre.com/tiles/terrain-rgb/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          maxzoom: 12,
         });
-
-        mapRef.current = map;
-        boundaryLayerRef.current = new google.maps.Data({ map });
-        boundaryLayerRef.current.setStyle({
-          strokeColor: '#2456d6',
-          strokeWeight: 1.5,
-          fillColor: '#2456d6',
-          fillOpacity: 0.04,
-        });
-
-        const observer = new ResizeObserver(() => {
-          if (mapRef.current) {
-            mapRef.current.setCenter(mapRef.current.getCenter() ?? { lat: MAP_DEFAULT_CENTER[0], lng: MAP_DEFAULT_CENTER[1] });
-          }
-        });
-        observer.observe(container);
-
-        const cleanup = () => {
-          observer.disconnect();
-          clearMapLayers();
-          if (boundaryLayerRef.current) {
-            boundaryLayerRef.current.forEach((feature) => boundaryLayerRef.current?.remove(feature));
-            boundaryLayerRef.current = null;
-          }
-          mapRef.current = null;
-        };
-
-        // keep a stable cleanup reference for the following effect
-        (map as google.maps.Map & { __cleanup?: () => void }).__cleanup = cleanup;
-        draw();
+        map.setTerrain({ source: "terrain-rgb", exaggeration: 1.1 });
       } catch {
-        if (!cancelled && container) {
-          container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;background:#0b1724;color:#a9b8b7;font:600 14px/1.4 IBM Plex Sans, sans-serif;">Google Maps failed to load. Check the API key and billing setup.</div>';
-          console.warn('Google Maps failed to load. Add VITE_GOOGLE_MAPS_API_KEY to render the map.');
-        }
+        // Terrain is optional; the 3D map remains usable without it.
       }
-    };
 
-    void loadMap();
-    return () => {
-      cancelled = true;
-      const map = mapRef.current as (google.maps.Map & { __cleanup?: () => void }) | null;
-      if (map && map.__cleanup) {
-        map.__cleanup();
+      try {
+        map.addLayer({
+          id: "crime-building-extrusion",
+          type: "fill-extrusion",
+          source: "openmaptiles",
+          "source-layer": "building",
+          minzoom: 15,
+          paint: {
+            "fill-extrusion-color": ["interpolate", ["linear"], ["zoom"], 15, "#dfe7ef", 18, "#d1d5db"],
+            "fill-extrusion-height": ["coalesce", ["get", "height"], ["get", "render_height"], 10],
+            "fill-extrusion-base": ["coalesce", ["get", "min_height"], 0],
+            "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 15, 0.1, 18, 0.7],
+          },
+        });
+      } catch {
+        // Building extrusions are only available when the current style exposes compatible geometry.
       }
+
+      updateBoundaries();
+      draw();
+    });
+
+    return () => {
+      resizeObserver.disconnect();
+      map.remove();
       mapRef.current = null;
     };
-  }, [clearMapLayers, draw, theme]);
+  }, [draw, updateBoundaries]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.setOptions({
-      styles: theme === 'dark' ? [
-        { elementType: 'geometry', stylers: [{ color: '#111827' }] },
-        { elementType: 'labels.text.fill', stylers: [{ color: '#f3f4f6' }] },
-        { elementType: 'labels.text.stroke', stylers: [{ color: '#111827' }] },
-        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#374151' }] },
-        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
-      ] : undefined,
+
+    if (mapMode === "2d") {
+      map.easeTo({
+        pitch: 0,
+        bearing: 0,
+        duration: 700,
+      });
+      return;
+    }
+
+    map.easeTo({
+      pitch: 58,
+      bearing: 18,
+      duration: 700,
     });
-  }, [theme]);
+  }, [mapMode]);
 
   useEffect(() => {
     draw();
   }, [points, selectedId, cluster, draw]);
 
   useEffect(() => {
-    const layer = boundaryLayerRef.current;
-    if (!layer) return;
-    layer.forEach((feature) => layer.remove(feature));
-    boundaries.forEach((boundary) => {
-      const feature = boundary.geometry as GeoJSON.Feature;
-      layer.addGeoJson(feature);
-    });
-  }, [boundaries]);
+    updateBoundaries();
+  }, [boundaries, updateBoundaries]);
 
   return (
-    <div
-      ref={containerRef}
-      role="region"
-      aria-label={ariaLabel}
-      className={cn("z-0 w-full overflow-hidden rounded-lg", className)}
-    />
+    <div className={cn("relative w-full overflow-hidden rounded-lg", className)}>
+      <div
+        ref={containerRef}
+        role="region"
+        aria-label={ariaLabel}
+        className="h-full w-full"
+      />
+
+      <div className="absolute right-3 top-3 z-10 flex gap-2 rounded-xl border border-white/10 bg-slate-950/60 p-1 shadow-lg backdrop-blur-sm">
+        <button
+          type="button"
+          onClick={() => setMapMode("2d")}
+          className={cn(
+            "rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors",
+            mapMode === "2d" ? "bg-white text-slate-900" : "text-slate-200 hover:bg-white/10",
+          )}
+        >
+          2D
+        </button>
+        <button
+          type="button"
+          onClick={() => setMapMode("3d")}
+          className={cn(
+            "rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors",
+            mapMode === "3d" ? "bg-white text-slate-900" : "text-slate-200 hover:bg-white/10",
+          )}
+        >
+          3D
+        </button>
+        <button
+          type="button"
+          onClick={resetView}
+          className="rounded-lg bg-analytics px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-analytics/90"
+        >
+          Reset View
+        </button>
+      </div>
+    </div>
   );
 }

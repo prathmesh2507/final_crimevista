@@ -1,6 +1,6 @@
 # CrimeVista — Frontend
 
-Global Crime Intelligence & Urban Safety Analytics Platform. React + TypeScript + Tailwind + TanStack Query + Recharts + Google Maps JavaScript API.
+Global Crime Intelligence & Urban Safety Analytics Platform. React + TypeScript + Tailwind + TanStack Query + Recharts + MapLibre GL JS with OpenFreeMap tiles.
 
 ```
 EXISTING BACKEND → REST API → api/ (service layer) → hooks/ (React Query) → components/ → charts / map / tables
