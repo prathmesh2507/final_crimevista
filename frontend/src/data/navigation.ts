@@ -1,50 +1,67 @@
 import {
+  BookOpenIcon,
   FileTextIcon,
   FlameIcon,
-  HelpCircleIcon,
   LayoutDashboardIcon,
+  LineChartIcon,
   MapIcon,
   MapPinnedIcon,
   SettingsIcon,
-  TrendingUpIcon,
-  UploadIcon,
-  type LucideIcon,
-} from 'lucide-react';
+  UploadCloudIcon,
+  type LucideIcon } from
+'lucide-react';
 
 export interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
+  description: string;
+  assistantKey: string;
 }
 
-export interface NavGroup {
-  label: string;
+export interface NavSection {
+  title: string;
   items: NavItem[];
 }
 
-export const NAV_GROUPS: NavGroup[] = [
-  {
-    label: 'Intelligence',
-    items: [
-      { to: '/dashboard', label: 'Overview', icon: LayoutDashboardIcon },
-      { to: '/map', label: 'Crime Map', icon: MapIcon },
-      { to: '/hotspots', label: 'Hotspots', icon: FlameIcon },
-      { to: '/trends', label: 'Trends', icon: TrendingUpIcon },
-      { to: '/areas', label: 'Area Explorer', icon: MapPinnedIcon },
-    ],
-  },
-  {
-    label: 'Operations',
-    items: [
-      { to: '/upload', label: 'Data Upload', icon: UploadIcon },
-      { to: '/reports', label: 'Reports', icon: FileTextIcon },
-      { to: '/help', label: 'Help', icon: HelpCircleIcon },
-    ],
-  },
-];
+export const NAV_SECTIONS: NavSection[] = [
+{
+  title: 'Overview',
+  items: [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon, description: 'Citywide intelligence overview', assistantKey: 'dashboard' }]
 
-export const SETTINGS_NAV: NavItem = { to: '/settings', label: 'Settings', icon: SettingsIcon };
-export const HELP_NAV: NavItem = { to: '/help', label: 'Help', icon: HelpCircleIcon };
+},
+{
+  title: 'Analysis',
+  items: [
+  { to: '/map', label: 'Crime Map', icon: MapIcon, description: 'Geospatial incident workspace', assistantKey: 'map' },
+  { to: '/hotspots', label: 'Hotspots', icon: FlameIcon, description: 'Ranked concentration areas', assistantKey: 'hotspots' },
+  { to: '/trends', label: 'Trends', icon: LineChartIcon, description: 'Change over time', assistantKey: 'trends' },
+  { to: '/areas', label: 'Areas', icon: MapPinnedIcon, description: 'Investigate a single area', assistantKey: 'areas' }]
 
-export const MOBILE_PRIMARY_NAV: NavItem[] = NAV_GROUPS[0].items.slice(0, 4);
-export const MOBILE_MORE_NAV: NavItem[] = [NAV_GROUPS[0].items[4], ...NAV_GROUPS[1].items, SETTINGS_NAV];
+},
+{
+  title: 'Intelligence',
+  items: [{ to: '/reports', label: 'Reports', icon: FileTextIcon, description: 'Generate briefing documents', assistantKey: 'reports' }]
+},
+{
+  title: 'System',
+  items: [
+  { to: '/upload', label: 'Upload Data', icon: UploadCloudIcon, description: 'Replace the active dataset', assistantKey: 'upload' },
+  { to: '/help', label: 'Help', icon: BookOpenIcon, description: 'Guides and definitions', assistantKey: 'help' },
+  { to: '/settings', label: 'Settings', icon: SettingsIcon, description: 'Appearance, connection, access', assistantKey: 'settings' }]
+
+}];
+
+
+export const NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
+
+export const MOBILE_PRIMARY = ['/dashboard', '/map', '/hotspots', '/trends'];
+
+export function findNavItem(pathname: string): {item: NavItem;section: string;} | null {
+  for (const section of NAV_SECTIONS) {
+    const item = section.items.find((entry) => pathname.startsWith(entry.to));
+    if (item) return { item, section: section.title };
+  }
+  return null;
+}

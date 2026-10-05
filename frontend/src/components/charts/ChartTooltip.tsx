@@ -1,27 +1,34 @@
-import React from 'react';
-import type { TooltipProps } from 'recharts';
-import { formatNumber } from '../../utils/formatters';
 
-type ChartTooltipProps = TooltipProps<number, string> & {formatLabel?: (label: string) => string;};
+interface TooltipEntry {
+  name?: string | number;
+  value?: number | string;
+  color?: string;
+  dataKey?: string | number;
+}
 
-export function ChartTooltip({ active, payload, label, formatLabel }: ChartTooltipProps) {
+interface ChartTooltipProps {
+  active?: boolean;
+  label?: string | number;
+  payload?: TooltipEntry[];
+  labelFormatter?: (label: string) => string;
+  unit?: string;
+}
+
+export function ChartTooltip({ active, label, payload, labelFormatter, unit = 'incidents' }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
-  const heading = label !== undefined && label !== null && label !== '' ? formatLabel ? formatLabel(String(label)) : String(label) : null;
+  const rows = [...payload].sort((a, b) => Number(b.value) - Number(a.value));
   return (
-    <div className="min-w-[140px] rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-pop">
-      {heading && <p className="mb-1.5 font-semibold text-fg">{heading}</p>}
-      <ul className="space-y-1">
-        {payload.map((entry) => {
-          const fill = (entry.payload as {fill?: string;} | undefined)?.fill;
-          return (
-            <li key={`${entry.name}-${entry.dataKey}`} className="flex items-center gap-2">
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: entry.color ?? fill }} aria-hidden />
-              <span className="text-muted">{entry.name}</span>
-              <span className="ml-auto pl-3 font-semibold tabular-nums text-fg">{formatNumber(Number(entry.value))}</span>
-            </li>);
-
-        })}
-      </ul>
+    <div className="min-w-[160px] rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-pop">
+      {label !== undefined && <p className="mb-1.5 font-medium text-fg">{labelFormatter ? labelFormatter(String(label)) : label}</p>}
+      <div className="space-y-1">
+        {rows.map((entry) =>
+        <div key={String(entry.dataKey ?? entry.name)} className="flex items-center gap-2">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
+            <span className="flex-1 truncate text-muted">{rows.length > 1 ? entry.name : unit}</span>
+            <span className="font-medium tabular-nums text-fg">{Number(entry.value).toLocaleString('en-US')}</span>
+          </div>
+        )}
+      </div>
     </div>);
 
 }

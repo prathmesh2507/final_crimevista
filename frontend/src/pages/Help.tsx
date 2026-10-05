@@ -1,106 +1,127 @@
-import React, { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowRightIcon, BookOpenTextIcon, ChevronDownIcon, SparklesIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { HELP_SECTIONS } from '../data/helpContent';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowRightIcon, ChevronDownIcon, CompassIcon, SearchIcon, SparklesIcon } from 'lucide-react';
+import { HELP_TOPICS, type HelpTopic } from '../data/helpTopics';
+import { HelpVisualPanel } from '../components/help/HelpVisualPanel';
+import { Button } from '../components/ui/Button';
+import { useAssistant } from '../contexts/AssistantContext';
+import { startTour } from '../utils/tour';
 import { cn } from '../utils/cn';
 
-export function Help() {
-  const [openSection, setOpenSection] = useState('welcome');
+const CATEGORIES: HelpTopic['category'][] = ['Getting started', 'Analysis', 'Intelligence', 'Definitions'];
 
-  const quickLinks = useMemo(
-    () => HELP_SECTIONS.map((section) => ({ id: section.id, label: section.title })),
-    [],
-  );
+export function Help() {
+  const assistant = useAssistant();
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState<string | null>('what-is');
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return HELP_TOPICS;
+    return HELP_TOPICS.filter((topic) => [topic.title, topic.summary, ...topic.body].join(' ').toLowerCase().includes(q));
+  }, [query]);
 
   return (
-    <div className="space-y-6">
-      <header className="rounded-2xl border border-line bg-surface p-6 shadow-card">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-analytics/20 bg-analytics-soft px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-analytics">
-              <SparklesIcon className="h-3.5 w-3.5" />
-              Quick start
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-fg">CrimeVista Help & guide</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted">
-              Learn how to read the dashboard, investigate hotspots, work with filters, and use the AI assistant without leaving the current workflow.
-            </p>
-          </div>
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 rounded-xl bg-analytics px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-analytics/90"
-          >
-            Open dashboard
-            <ArrowRightIcon className="h-4 w-4" />
-          </Link>
-        </div>
-      </header>
+    <div className="pb-12">
+      <section className="border-b border-line bg-surface/60">
+        <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-fg">Help Center</h1>
+          <p className="mt-1.5 text-sm text-muted">See the pattern. Understand the risk. Everything you need to read CrimeVista with confidence.</p>
+          <div className="mt-5 flex h-11 items-center gap-2.5 rounded-xl border border-line bg-surface px-3.5 shadow-panel focus-within:border-primary/50">
+            <SearchIcon className="h-4 w-4 text-subtle" aria-hidden />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search help — e.g. risk level, heatmap, upload columns"
+              aria-label="Search help"
+              className="h-full flex-1 bg-transparent text-sm text-fg placeholder:text-subtle focus:outline-none" />
 
-      <section className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="rounded-2xl border border-line bg-surface p-4 shadow-card">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg">
-            <BookOpenTextIcon className="h-4 w-4 text-analytics" />
-            Jump to section
           </div>
-          <nav className="space-y-1.5">
-            {quickLinks.map((link) => (
-              <button
-                key={link.id}
-                type="button"
-                onClick={() => setOpenSection(link.id)}
-                className={cn(
-                  'flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors',
-                  openSection === link.id ? 'bg-analytics-soft text-analytics-strong' : 'text-muted hover:bg-canvas',
-                )}
-              >
-                <span>{link.label}</span>
-                <ChevronDownIcon className={cn('h-4 w-4 transition-transform', openSection === link.id && 'rotate-180')} />
-              </button>
-            ))}
-          </nav>
-        </aside>
-
-        <div className="space-y-4">
-          {HELP_SECTIONS.map((section, index) => {
-            const isOpen = openSection === section.id;
-            return (
-              <motion.section
-                key={section.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.02 }}
-                className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card"
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpenSection(isOpen ? '' : section.id)}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
-                >
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Section {index + 1}</p>
-                    <h2 className="mt-1 text-lg font-semibold text-fg">{section.title}</h2>
-                  </div>
-                  <ChevronDownIcon className={cn('h-5 w-5 text-muted transition-transform', isOpen && 'rotate-180')} />
-                </button>
-                {isOpen && (
-                  <div className="border-t border-line px-5 py-4">
-                    <p className="text-sm text-muted">{section.summary}</p>
-                    <ul className="mt-4 space-y-2">
-                      {section.bullets.map((bullet) => (
-                        <li key={bullet} className="flex gap-2 text-sm text-fg">
-                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-analytics" aria-hidden />
-                          <span>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </motion.section>
-            );
-          })}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button size="sm" variant="primary" onClick={startTour} leadingIcon={<CompassIcon className="h-3.5 w-3.5" />}>
+              Take the 60-second tour
+            </Button>
+            <Button size="sm" onClick={() => assistant.open('How do I use CrimeVista?')} leadingIcon={<SparklesIcon className="h-3.5 w-3.5" />}>
+              Ask CrimeVista AI
+            </Button>
+          </div>
         </div>
       </section>
-    </div>
-  );
+
+      <div className="mx-auto max-w-4xl space-y-8 px-4 pt-8 sm:px-6">
+        {results.length === 0 &&
+        <div className="py-10 text-center">
+            <p className="text-sm font-medium text-fg">No help articles match “{query}”</p>
+            <button type="button" onClick={() => assistant.open(query)} className="cv-focus mt-2 rounded text-sm font-medium text-primary">
+              Ask CrimeVista AI instead →
+            </button>
+          </div>
+        }
+        {CATEGORIES.map((category) => {
+          const topics = results.filter((topic) => topic.category === category);
+          if (!topics.length) return null;
+          return (
+            <section key={category} aria-labelledby={`help-${category}`}>
+              <h2 id={`help-${category}`} className="cv-label mb-2 px-1">
+                {category}
+              </h2>
+              <div className="cv-panel divide-y divide-line overflow-hidden">
+                {topics.map((topic) => {
+                  const expanded = open === topic.id || Boolean(query.trim());
+                  return (
+                    <div key={topic.id} id={topic.id}>
+                      <button
+                        type="button"
+                        onClick={() => setOpen(open === topic.id ? null : topic.id)}
+                        aria-expanded={expanded}
+                        aria-controls={`${topic.id}-panel`}
+                        className="cv-focus flex w-full items-center gap-4 px-5 py-4 text-left transition-colors duration-150 hover:bg-raised/50">
+
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold text-fg">{topic.title}</span>
+                          <span className="cv-caption mt-0.5 block">{topic.summary}</span>
+                        </span>
+                        <ChevronDownIcon className={cn('h-4 w-4 shrink-0 text-subtle transition-transform duration-200', expanded && 'rotate-180')} aria-hidden />
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {expanded &&
+                        <motion.div
+                          id={`${topic.id}-panel`}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                          className="overflow-hidden">
+
+                            <div className="space-y-4 px-5 pb-5">
+                              {topic.body.map((paragraph) =>
+                            <p key={paragraph} className="max-w-2xl text-sm leading-relaxed text-muted">
+                                  {paragraph}
+                                </p>
+                            )}
+                              {topic.visual &&
+                            <div className="rounded-xl border border-line bg-raised/50 p-4">
+                                  <HelpVisualPanel visual={topic.visual} />
+                                </div>
+                            }
+                              {topic.route &&
+                            <Link to={topic.route.to} className="cv-focus inline-flex items-center gap-1 rounded text-sm font-medium text-primary">
+                                  {topic.route.label} <ArrowRightIcon className="h-3.5 w-3.5" aria-hidden />
+                                </Link>
+                            }
+                            </div>
+                          </motion.div>
+                        }
+                      </AnimatePresence>
+                    </div>);
+
+                })}
+              </div>
+            </section>);
+
+        })}
+      </div>
+    </div>);
+
 }

@@ -1,106 +1,154 @@
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { uploadApi } from "../api/uploadApi";
-import { useFilters } from "./useFilters";
-import type { UploadConfig, UploadStage } from "../types/operations";
-import { validateUploadFile } from "../utils/files";
-import { createEmptyFilters } from "../utils/filters";
+import { useCallback, useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { uploadApi } from '../api/services';
+import { friendlyError } from '../api/errors';
+import { useFilters } from '../contexts/FilterContext';
+import { previewCsvFile, type CsvPreview } from '../utils/dataset';
+import type { UploadConfig, UploadStatus } from '../types/operations';
 
-const isTerminal = (stage?: UploadStage) =>
-  stage === "completed" || stage === "failed";
+export type WizardStep = 'select' | 'validate' | 'preview' | 'import' | 'complete';
 
-export type UploadPhase =
-  | "idle"
-  | "ready"
-  | "uploading"
-  | "processing"
-  | "completed"
-  | "failed";
-
-export function useUploadConfig() {
-  return useQuery({
-    queryKey: ["upload", "config"],
-    queryFn: ({ signal }) => uploadApi.getConfig(signal),
-    staleTime: 30 * 60_000,
-  });
+export interface FileCheck {
+  label: string;
+  ok: boolean;
+  detail: string;
+  severity: 'error' | 'warning' | 'ok';
 }
 
-export function useUpload(config: UploadConfig) {
+const TERMINAL = new Set(['completed', 'failed']);
+
+export function useUpload() {
   const queryClient = useQueryClient();
-  const { applyFilters } = useFilters();
-  const appliedUploadId = useRef<string | null>(null);
+  const { resetFilters } = useFilters();
+  const config = useQuery({ queryKey: ['upload-config'], queryFn: uploadApi.getConfig, staleTime: 10 * 60_000 });
+
+  const [step, setStep] = useState<WizardStep>('select');
   const [file, setFile] = useState<File | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
+  const [preview, setPreview] = useState<CsvPreview | null>(null);
+  const [checks, setChecks] = useState<FileCheck[]>([]);
+  const [analysing, setAnalysing] = useState(false);
+  const [uploadId, setUploadId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<{title: string;description: string;status: number;} | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const mutation = useMutation({
-    mutationFn: (selected: File) => uploadApi.uploadFile(selected, setProgress),
+  const status = useQuery({
+    queryKey: ['upload-status', uploadId],
+    queryFn: () => uploadApi.getStatus(uploadId as string),
+    enabled: Boolean(uploadId),
+    refetchInterval: (query) => query.state.data && TERMINAL.has(query.state.data.stage) ? false : 1500
   });
 
-  const uploadId = mutation.data?.uploadId ?? null;
-  const statusQuery = useQuery({
-    queryKey: ["upload", "status", uploadId],
-    queryFn: ({ signal }) => uploadApi.getStatus(uploadId as string, signal),
-    enabled: Boolean(uploadId) && !isTerminal(mutation.data?.stage),
-    refetchInterval: (query) =>
-      isTerminal(query.state.data?.stage) ? false : 1500,
-  });
+  const selectFile = useCallback(
+    async (next: File) => {
+      setFile(next);
+      setStep('validate');
+      setAnalysing(true);
+      setSubmitError(null);
+      const cfg: UploadConfig | undefined = config.data;
+      const accepted = cfg?.acceptedExtensions ?? ['.csv'];
+      const maxMb = cfg?.maxFileSizeMb ?? 25;
+      const extOk = accepted.some((ext) => next.name.toLowerCase().endsWith(ext));
+      const sizeOk = next.size <= maxMb * 1024 * 1024;
+      const result: FileCheck[] = [
+      { label: 'File type', ok: extOk, severity: extOk ? 'ok' : 'error', detail: extOk ? 'CSV file' : `Accepted: ${accepted.join(', ')}` },
+      { label: 'File size', ok: sizeOk, severity: sizeOk ? 'ok' : 'error', detail: sizeOk ? `Within ${maxMb} MB limit` : `Exceeds ${maxMb} MB limit` }];
 
-  const status = statusQuery.data ?? mutation.data ?? null;
+      let parsed: CsvPreview | null = null;
+      if (extOk && sizeOk) {
+        try {
+          parsed = await previewCsvFile(next);
+          const columnsOk = parsed.missingColumns.length === 0;
+          result.push({
+            label: 'Required columns',
+            ok: columnsOk,
+            severity: columnsOk ? 'ok' : 'error',
+            detail: columnsOk ? 'All required columns present' : `Missing: ${parsed.missingColumns.join(', ')}`
+          });
+          result.push({
+            label: 'Rows detected',
+            ok: parsed.rowCount > 0,
+            severity: parsed.rowCount > 0 ? 'ok' : 'error',
+            detail: parsed.rowCount > 0 ? `${parsed.rowCount.toLocaleString('en-US')} data rows` : 'The file has no data rows'
+          });
+          result.push({
+            label: 'Readable dates',
+            ok: parsed.invalidDateCount === 0,
+            severity: parsed.invalidDateCount === 0 ? 'ok' : 'warning',
+            detail:
+            parsed.invalidDateCount === 0 ?
+            'Every row has a valid date' :
+            `${parsed.invalidDateCount.toLocaleString('en-US')} rows will be rejected`
+          });
+          result.push({
+            label: 'Coordinates',
+            ok: parsed.missingCoordinateCount === 0,
+            severity: parsed.missingCoordinateCount === 0 ? 'ok' : 'warning',
+            detail:
+            parsed.missingCoordinateCount === 0 ?
+            'Every row can be mapped' :
+            `${parsed.missingCoordinateCount.toLocaleString('en-US')} rows won't appear on the map`
+          });
+        } catch {
+          result.push({ label: 'Readable file', ok: false, severity: 'error', detail: 'The file could not be read as CSV' });
+        }
+      }
+      setPreview(parsed);
+      setChecks(result);
+      setAnalysing(false);
+    },
+    [config.data]
+  );
+
+  const startImport = useCallback(async () => {
+    if (!file) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const created: UploadStatus = await uploadApi.uploadFile(file);
+      queryClient.setQueryData(['upload-status', created.uploadId], created);
+      setUploadId(created.uploadId);
+      setStep('import');
+    } catch (error) {
+      setSubmitError(friendlyError(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [file, queryClient]);
 
   useEffect(() => {
-    if (status?.stage !== "completed") return;
-    queryClient.invalidateQueries({
-      predicate: (q) => q.queryKey[0] !== "upload",
-    });
-    if (appliedUploadId.current === status.uploadId) return;
-    appliedUploadId.current = status.uploadId;
-    if (status.analysisStatus === "completed") {
-      applyFilters(createEmptyFilters());
+    if (status.data?.stage === 'completed' && step === 'import') {
+      resetFilters();
+      queryClient.invalidateQueries({ predicate: (query) => !String(query.queryKey[0]).startsWith('upload') });
+      setStep('complete');
     }
-  }, [
-    status?.stage,
-    status?.uploadId,
-    status?.analysisStatus,
-    queryClient,
-    applyFilters,
-  ]);
+    if (status.data?.stage === 'failed' && step === 'import') setStep('complete');
+  }, [status.data?.stage, step, queryClient, resetFilters]);
 
-  const selectFile = (selected: File) => {
-    const error = validateUploadFile(selected, config);
-    mutation.reset();
-    setProgress(0);
-    setValidationError(error);
-    setFile(error ? null : selected);
-  };
-
-  const reset = () => {
-    mutation.reset();
+  const reset = useCallback(() => {
+    setStep('select');
     setFile(null);
-    setProgress(0);
-    setValidationError(null);
-  };
+    setPreview(null);
+    setChecks([]);
+    setUploadId(null);
+    setSubmitError(null);
+  }, []);
 
-  let phase: UploadPhase = file ? "ready" : "idle";
-  if (mutation.isPending) phase = "uploading";
-  else if (
-    mutation.isError ||
-    statusQuery.isError ||
-    status?.stage === "failed"
-  )
-    phase = "failed";
-  else if (status?.stage === "completed") phase = "completed";
-  else if (status) phase = "processing";
+  const blocking = checks.some((check) => check.severity === 'error');
 
   return {
+    config,
+    step,
+    setStep,
     file,
-    phase,
-    progress,
-    status,
-    validationError,
-    requestError: mutation.error ?? statusQuery.error ?? null,
+    preview,
+    checks,
+    analysing,
+    blocking,
     selectFile,
-    start: () => file && mutation.mutate(file),
-    reset,
+    startImport,
+    submitting,
+    submitError,
+    status: status.data ?? null,
+    reset
   };
 }

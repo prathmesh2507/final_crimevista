@@ -1,34 +1,50 @@
-import React, { useLayoutEffect, useState } from "react";
-import { ThemeContext } from "./theme";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-type Theme = "light" | "dark";
+export type Theme = 'dark' | 'light';
 
-const STORAGE_KEY = "crimevista.theme";
+const STORAGE_KEY = 'crimevista.theme';
 
-function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "light";
-  const storedTheme = window.localStorage.getItem(STORAGE_KEY);
-  if (storedTheme === "light" || storedTheme === "dark") return storedTheme;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+interface ThemeContextValue {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    window.localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
+function initialTheme(fallback: Theme): Theme {
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored === 'dark' || stored === 'light') return stored;
+  } catch {
 
-  const toggleTheme = () =>
-    setTheme((current) => (current === "light" ? "dark" : "light"));
+    // storage unavailable
+  }return fallback;
+}
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+export function ThemeProvider({ children, defaultTheme = 'dark' }: {children: React.ReactNode;defaultTheme?: Theme;}) {
+  const [theme, setThemeState] = useState<Theme>(() => initialTheme(defaultTheme));
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    root.dataset.theme = theme;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, theme);
+    } catch {
+
+      // ignore
+    }}, [theme]);
+
+  const setTheme = useCallback((next: Theme) => setThemeState(next), []);
+  const toggleTheme = useCallback(() => setThemeState((current) => current === 'dark' ? 'light' : 'dark'), []);
+  const value = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+export function useTheme(): ThemeContextValue {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error('useTheme must be used inside ThemeProvider');
+  return context;
 }
