@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { AreaBoundary } from "../../types/crime";
 import { cn } from "../../utils/cn";
-import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM } from "../../utils/constants";
+import { MAP_DEFAULT_ZOOM } from "../../utils/constants";
 
 export interface MapPoint {
   id: string;
@@ -29,6 +30,8 @@ const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
 const NAGPUR_CENTER: [number, number] = [79.0882, 21.1458];
 const CLUSTER_CELL_DEG = 0.0125;
 
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
+
 function liftBoundaryFeatures(boundaries: AreaBoundary[]): GeoJSON.Feature[] {
   return boundaries.flatMap((boundary) => {
     const geometry = boundary.geometry as GeoJSON.GeoJsonObject;
@@ -38,7 +41,7 @@ function liftBoundaryFeatures(boundaries: AreaBoundary[]): GeoJSON.Feature[] {
     }
 
     if (geometry.type === "FeatureCollection") {
-      return geometry.features as GeoJSON.Feature[];
+      return (geometry as GeoJSON.FeatureCollection).features as GeoJSON.Feature[];
     }
 
     return [{
@@ -94,7 +97,7 @@ function buildHeatFeatures(points: MapPoint[]) {
 function buildClusterFeatures(points: MapPoint[]) {
   const cells = new Map<string, { count: number; lat: number; lng: number; ids: string[] }>();
 
-  points.forEach((point) => {
+  points.filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng)).forEach((point) => {
     const key = `${Math.round(point.lat / CLUSTER_CELL_DEG)}:${Math.round(point.lng / CLUSTER_CELL_DEG)}`;
     const bucket = cells.get(key);
 
@@ -142,11 +145,15 @@ export function MapView({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const stateRef = useRef({ points, cluster, selectedId });
+  const boundariesRef = useRef(boundaries);
+  const maxFitZoomRef = useRef(maxFitZoom);
   const onSelectRef = useRef(onSelect);
   const [mapMode, setMapMode] = useState<"2d" | "3d">("3d");
   const [liveStamp, setLiveStamp] = useState(() => new Date());
 
   stateRef.current = { points, cluster, selectedId };
+  boundariesRef.current = boundaries;
+  maxFitZoomRef.current = maxFitZoom;
   onSelectRef.current = onSelect;
 
   const resetView = useCallback(() => {
@@ -164,11 +171,11 @@ export function MapView({
 
   const updateBoundaries = useCallback(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !map.isStyleLoaded()) return;
 
     const boundaryData = {
       type: "FeatureCollection",
-      features: liftBoundaryFeatures(boundaries),
+      features: liftBoundaryFeatures(boundariesRef.current),
     } as GeoJSON.FeatureCollection;
 
     const existing = map.getSource("crime-boundaries") as maplibregl.GeoJSONSource | undefined;
@@ -199,16 +206,18 @@ export function MapView({
         "line-opacity": 0.9,
       },
     });
-  }, [boundaries]);
+  }, []);
 
   const updateMapLayers = useCallback(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !map.isStyleLoaded()) return;
 
     const { points: all, cluster: clustering, selectedId: selected } = stateRef.current;
     const heatData = buildHeatFeatures(all);
     const pointData = buildIncidentFeatures(all, selected);
-    const clusterData = clustering ? buildClusterFeatures(all) : pointData;
+    const clusterData = clustering
+      ? buildClusterFeatures(all)
+      : { type: "FeatureCollection", features: [] } as GeoJSON.FeatureCollection;
 
     [
       { id: "crime-heat", data: heatData },
@@ -311,7 +320,7 @@ export function MapView({
       if (!bounds.isEmpty()) {
         map.fitBounds(bounds, {
           padding: 40,
-          maxZoom: maxFitZoom,
+          maxZoom: maxFitZoomRef.current,
           duration: 700,
           animate: true,
         });
@@ -321,7 +330,7 @@ export function MapView({
     if (map.getZoom() >= 9 || clustering) {
       fitBoundsIfNeeded();
     }
-  }, [cluster, maxFitZoom, points, resetView]);
+  }, [resetView]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -334,9 +343,6 @@ export function MapView({
       zoom: MAP_DEFAULT_ZOOM,
       pitch: 58,
       bearing: 18,
-      antialias: true,
-      attributionControl: true,
-      preserveDrawingBuffer: true,
     });
 
     mapRef.current = map;
