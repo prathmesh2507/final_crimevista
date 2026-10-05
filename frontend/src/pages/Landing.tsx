@@ -456,8 +456,8 @@ export function Landing() {
             <span className="landing-gradient-text">insights.</span>
           </h1>
           <p className="mt-6 max-w-[500px] text-sm leading-7 text-slate-300 sm:text-base sm:leading-8">
-            Explore crime patterns across with clear data, interactive maps, and
-            thoughtful analytics—all in one place.
+            Explore crime patterns across cities with clear data, interactive maps,
+            and thoughtful analytics—all in one place.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/dashboard" className="landing-primary-cta">
@@ -481,7 +481,7 @@ export function Landing() {
           <div className="landing-orbit absolute -inset-5 rounded-[2rem] sm:-inset-9" />
           <div className="relative">
             <DashboardPreview />
-            <div className="landing-float-card absolute -bottom-5 -left-3 hidden items-center gap-3 rounded-xl border border-white/10 bg-[#0c1b2c]/95 p-3 shadow-2xl sm:flex lg:-left-7">
+            <div className="landing-float-card pointer-events-none absolute -bottom-3 left-4 z-20 hidden items-center gap-3 rounded-xl border border-white/10 bg-[#0c1b2c]/95 p-3 shadow-2xl sm:flex lg:left-6 lg:bottom-4">
               <span className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-400/10 text-emerald-300">
                 <TrendingUpIcon className="h-4 w-4" aria-hidden />
               </span>

@@ -147,7 +147,12 @@ export function MapView({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !GOOGLE_MAPS_API_KEY) return;
+    if (!container) return;
+
+    if (!GOOGLE_MAPS_API_KEY) {
+      container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;background:#0b1724;color:#a9b8b7;font:600 14px/1.4 IBM Plex Sans, sans-serif;">Add VITE_GOOGLE_MAPS_API_KEY to render the Google map.</div>';
+      return;
+    }
 
     let cancelled = false;
 
@@ -207,7 +212,8 @@ export function MapView({
         (map as google.maps.Map & { __cleanup?: () => void }).__cleanup = cleanup;
         draw();
       } catch {
-        if (!cancelled) {
+        if (!cancelled && container) {
+          container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;background:#0b1724;color:#a9b8b7;font:600 14px/1.4 IBM Plex Sans, sans-serif;">Google Maps failed to load. Check the API key and billing setup.</div>';
           console.warn('Google Maps failed to load. Add VITE_GOOGLE_MAPS_API_KEY to render the map.');
         }
       }

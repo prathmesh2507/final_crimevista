@@ -22,59 +22,70 @@ def _build_fallback_response(message: str, context: dict[str, Any] | None = None
         cleaned = "How do I use CrimeVista?"
 
     knowledge = {
-        "overview": "The dashboard summarises the current filtered crime dataset, including KPIs, incident trends, and the highest-risk areas. Use the filter panel to narrow by date, crime type, area, severity, or time period.",
-        "map": "The Crime Map plots geocoded incidents with filters applied. A cluster toggle helps you group nearby points, while the detail panel shows the incident context and severity for a selected record.",
-        "hotspots": "Hotspots rank areas by incident concentration and density. Watch the top-ranked locations, high-severity counts, and dominant crime type to spot where intervention is most urgent.",
-        "areas": "Area Explorer compares one area against the citywide pattern, showing the area's contribution, dominant crime types, and temporal change. It helps explain whether a local spike is unusual or part of a broader trend.",
-        "upload": "Data Upload accepts CSV files with the required incident columns. The backend validates the file, updates the active dataset, and reports rows imported, rejected, and areas detected.",
-        "reports": "Reports let you generate export-ready summaries for a selected period, section set, and filters. They are useful for briefing teams and preserving audit-ready snapshots.",
-        "risk": "Risk levels summarise where the concentration and severity of incidents are highest. Treat the top hotspots as priority areas for deeper review, patrol, or investigation planning.",
-        "severity": "Severity reflects how serious or impactful an incident is. Critical and high-severity incidents usually warrant faster attention, while low-severity incidents may still matter when clustered in a small area.",
-        "filters": "Filters help narrow the active dataset to a relevant period, area, crime category, severity, or time-of-day slice. Resetting filters restores the full citywide view.",
-        "faq": "CrimeVista is built for city-scale crime intelligence and works from the active dataset loaded into the app. When no external AI provider is configured, the assistant answers from the app's built-in crime intelligence guidance and still helps with navigation, filters, and KPIs.",
+        "overview": "This view shows the current citywide picture: total incidents, trend direction, and where pressure is building. If cases are rising in a small area, focus on the hotspot and compare it against the wider baseline.",
+        "map": "The map shows where incidents are happening. Use clustering to reduce noise, click a marker to inspect the record, and check whether the pattern is concentrated in one area or spread across the city.",
+        "hotspots": "Hotspots highlight the areas with the strongest concentration of incidents or repeated risk. These are the places to review first for patrol planning, surveillance, or deeper investigation.",
+        "areas": "Area Explorer compares one area to the citywide pattern. It helps answer whether a neighbourhood spike is unusual, part of a larger trend, or tied to a specific crime type or time window.",
+        "upload": "Upload lets you bring in a fresh city dataset. Once the file is validated, the app updates the active records and your dashboard, map, trends, and hotspots reflect the new data.",
+        "reports": "Reports turn the current view into a shareable summary. They are useful for briefing a team, documenting a risk period, or explaining what changed in a set of areas.",
+        "risk": "Risk is not just volume; it also reflects concentration and severity. A small area with repeated serious incidents is often more urgent than a larger low-severity spread.",
+        "severity": "Severity tells you how serious an incident is. Critical and high-severity cases deserve faster attention, while low-severity events still matter if they cluster in one location over time.",
+        "filters": "Filters help you narrow the data to a date range, crime type, area, severity, or time period. That makes the dashboard and map more actionable instead of overwhelming.",
+        "faq": "CrimeVista helps people understand what is happening in a city, where risk is clustering, and which areas deserve attention. It is built for practical insight, not just system explanation.",
     }
 
     answer = knowledge.get(page, knowledge["faq"]) if page in knowledge else knowledge["faq"]
 
     if _matches(cleaned, "dashboard", "overview", "kpi", "executive"):
-        answer = "The executive overview combines total incident volume, key trend indicators, and distribution charts. It is designed to show whether the citywide picture is stable, rising, or concentrated in a few hotspots."
-    elif _matches(cleaned, "map", "incident", "location", "geo"):
+        answer = "The overview shows whether the citywide picture is stable, growing, or concentrated in a few hotspots. It is the best place to start when you want a quick read on how risk is changing."
+    elif _matches(cleaned, "map", "incident", "location", "geo", "where"):
         answer = knowledge["map"]
-    elif _matches(cleaned, "hotspot", "risk", "danger", "priority"):
+    elif _matches(cleaned, "hotspot", "risk", "danger", "priority", "unsafe", "which area"):
         answer = knowledge["hotspots"]
-    elif _matches(cleaned, "area", "area explorer", "comparison"):
+    elif _matches(cleaned, "area", "area explorer", "comparison", "neighbourhood", "neighborhood"):
         answer = knowledge["areas"]
-    elif _matches(cleaned, "upload", "dataset", "csv", "import"):
+    elif _matches(cleaned, "upload", "dataset", "csv", "import", "new city", "new data"):
         answer = knowledge["upload"]
-    elif _matches(cleaned, "report", "export", "pdf", "csv", "xlsx"):
+    elif _matches(cleaned, "report", "export", "pdf", "csv", "xlsx", "brief"):
         answer = knowledge["reports"]
-    elif _matches(cleaned, "severity", "critical", "high", "low"):
+    elif _matches(cleaned, "severity", "critical", "high", "low", "serious"):
         answer = knowledge["severity"]
-    elif _matches(cleaned, "filter", "date", "crime type", "time period"):
+    elif _matches(cleaned, "filter", "date", "crime type", "time period", "narrow"):
         answer = knowledge["filters"]
-    elif _matches(cleaned, "how", "use", "start", "help", "guide"):
-        answer = "Start with the dashboard for the citywide picture, then move to the map or hotspots page to drill into locations. Use filters to narrow the data and the Help page for the full walkthrough of each feature."
+    elif _matches(cleaned, "how", "use", "start", "help", "guide", "what should i do"):
+        answer = "Start with the overview to understand the citywide pattern, then move to hotspots or the map to find the specific areas that stand out. Use filters to narrow the view and focus on the most relevant pattern."
+    elif _matches(cleaned, "which area", "safer", "more secure", "safest", "secure", "most risky", "highest risk", "riskier", "unsafe"):
+        if selected_area:
+            answer = (
+                f"For a practical read, {selected_area} should be compared against nearby zones using three signals: incident count, severity mix, and whether the pattern is rising. "
+                "An area with fewer incidents, fewer serious events, and less clustering is usually the safer option."
+            )
+        else:
+            answer = (
+                "To identify the safer area, compare the zones with the lowest incident volume, the fewest high-severity incidents, and the weakest recurring pattern. "
+                "In plain terms, the safest area is usually the one with less concentration and less repeated risk over time."
+            )
 
     if selected_area:
-        answer += f" You are currently looking at the area '{selected_area}'."
+        answer += f" Right now, the active context is the area '{selected_area}'."
     if selected_incident:
-        answer += " The selected incident context is available if you want a deeper breakdown of that record."
+        answer += " The selected incident gives you a more detailed view of that case and its surrounding pattern."
     if filters:
-        answer += " The active filters are currently narrowing the dataset to a more specific scope."
+        answer += " The current filters are narrowing the dataset so this insight is based on a more specific view."
 
     suggested_actions = []
     if page == "dashboard":
-        suggested_actions = ["Review the KPI cards", "Inspect monthly trend", "Open the hotspot ranking"]
+        suggested_actions = ["Review KPI changes", "Check the hotspot list", "Open area comparison"]
     elif page == "map":
-        suggested_actions = ["Toggle nearby clustering", "Select a marked incident", "Check missing-location alerts"]
+        suggested_actions = ["Inspect a cluster", "Open the area detail", "Compare nearby incidents"]
     elif page == "hotspots":
-        suggested_actions = ["Review top risk areas", "Open area explorer", "Check severity split"]
+        suggested_actions = ["Review top-risk zones", "Compare area trends", "Check severity split"]
     elif page == "upload":
-        suggested_actions = ["Prepare the CSV", "Validate required columns", "Review upload status"]
+        suggested_actions = ["Load a fresh dataset", "Validate columns", "Review import status"]
     elif page == "reports":
-        suggested_actions = ["Create a report", "Select key sections", "Download the output"]
+        suggested_actions = ["Build a summary report", "Select key sections", "Share findings"]
     else:
-        suggested_actions = ["Open the Help page", "Review the dashboard", "Inspect hotspots"]
+        suggested_actions = ["Check the overview", "Review hotspots", "Use filters to narrow scope"]
 
     return {
         "answer": answer,
